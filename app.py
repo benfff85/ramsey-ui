@@ -76,7 +76,7 @@ col1, col2 = st.columns(2)
 gql_query = """
 query {
     summary {
-        stageSummary(stageId: 1, workUnitStatusList: [COMPLETE]) {
+        stageSummary(stageId=os.getenv('STAGE_ID', 'default_value'), workUnitStatusList=[COMPLETE]) {
             stageId
             workUnitCount
             workUnitStatusList
