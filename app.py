@@ -73,10 +73,13 @@ st.header("Work Units Progress")
 col1, col2 = st.columns(2)
 
 # GraphQL query
+stage_id = os.getenv('STAGE_ID', 'default_value')
+
 gql_query = """
 query {
     summary {
-        stageSummary(stageId=os.getenv('STAGE_ID', 'default_value'), workUnitStatusList=[COMPLETE]) {
+        stageSummary(stageId=stage_id, workUnitStatusList=[COMPLETE]) {
+
             stageId
             workUnitCount
             workUnitStatusList
