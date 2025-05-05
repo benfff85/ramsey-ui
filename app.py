@@ -78,8 +78,7 @@ stage_id = os.getenv('STAGE_ID', 'default_value')
 gql_query = """
 query {
     summary {
-        stageSummary(stageId=stage_id, workUnitStatusList=[COMPLETE]) {
-
+        stageSummary(stageId: """ + stage_id + """, workUnitStatusList: [COMPLETE]) {
             stageId
             workUnitCount
             workUnitStatusList
