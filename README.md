@@ -1,57 +1,43 @@
 # Ramsey UI
 
-A Streamlit-based dashboard for real-time monitoring and management of work unit processing and campaign data in the Ramsey system.
+A Streamlit dashboard for visualizing clique count progression across stages in the Ramsey distributed computing system.
 
 ## Features
-- Visualizes work unit processing status with charts and progress indicators
-- Displays client and campaign details with quick REST API integration
-- Interactive controls for fetching and viewing campaign data
-- Error handling and user-friendly warnings
 
-## Requirements
-- Python 3.8+
-- [Streamlit](https://streamlit.io/)
-- requests
-- pandas
-- altair
-- plotly
+- **Clique Count Progression Chart**: Line graph showing how clique count decreases over stages
+- **Improvement Metrics**: Current stage, clique count, total improvement
+- **Per-Stage Improvement Bars**: Visualize how much each stage improved
 
-## Installation
+## Environment Variables
 
-### Using Conda Environment (Recommended)
-1. Create and activate the `ramsey-ui` conda environment:
-   ```bash
-   conda create -n ramsey-ui python=3.11 -y
-   conda activate ramsey-ui
-   ```
-2. Install dependencies from `requirements.txt`:
-   ```bash
-   pip install -r requirements.txt
-   ```
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `API_BASE_URL` | Middleware API URL | `http://localhost:4040` |
+| `RAMSEY_CAMPAIGN_ID` | Campaign ID to monitor | `1` |
 
-### Using pip Only
-1. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+## Running Locally
 
-## Usage
-1. Set your API base URL in the `app.py` file if needed.
-2. Run the Streamlit app:
-   ```bash
-   streamlit run ramsey-ui/app.py
-   ```
-3. Open the provided local URL in your browser to access the dashboard.
-
-## Notes
-- Ensure the backend REST API is running and accessible from the machine running this UI.
-- Campaign detail fetching expects campaign IDs to be integers (not floats like `1.0`).
-
-## Project Structure
-```
-ramsey-ui/
-  └── app.py
+```bash
+pip install -r requirements.txt
+streamlit run app.py
 ```
 
-## License
-MIT License
+## Docker
+
+Build:
+```bash
+docker build -t benferenchak/ramsey-ui:develop .
+```
+
+Run:
+```bash
+docker run -p 8501:8501 -e API_BASE_URL=http://ramsey-mw:8080 benferenchak/ramsey-ui:develop
+```
+
+## Screenshot
+
+The dashboard displays:
+- Current stage number and clique count
+- Total improvement from first to current stage
+- Interactive line chart of progression
+- Bar chart showing improvement per stage transition
