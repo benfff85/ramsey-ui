@@ -204,36 +204,40 @@ fig = go.Figure()
 
 # Add line trace
 fig.add_trace(go.Scatter(
-    x=df['stage_id'],
+    x=df['created_date'],
     y=df['clique_count'],
     mode='lines+markers',
     name='Clique Count',
     line=dict(color='#2ecc71', width=3),
     marker=dict(size=8),
     hovertemplate=(
-        '<b>Stage %{x}</b><br>'
+        '<b>Stage %{customdata}</b><br>'
+        '%{x}<br>'
         'Clique Count: %{y:,}<br>'
         '<extra></extra>'
-    )
+    ),
+    customdata=df['stage_id']
 ))
 
 # Highlight active stage on chart
 if not active_stages.empty:
     fig.add_trace(go.Scatter(
-        x=active_stages['stage_id'],
+        x=active_stages['created_date'],
         y=active_stages['clique_count'],
         mode='markers',
         name='Active Stage',
         marker=dict(size=15, color='#e74c3c', symbol='star'),
         hovertemplate=(
-            '<b>ACTIVE Stage %{x}</b><br>'
+            '<b>ACTIVE Stage %{customdata}</b><br>'
+            '%{x}<br>'
             'Clique Count: %{y:,}<br>'
             '<extra></extra>'
-        )
+        ),
+        customdata=active_stages['stage_id']
     ))
 
 fig.update_layout(
-    xaxis_title="Stage ID",
+    xaxis_title="Date",
     yaxis_title="Clique Count",
     height=500,
     hovermode='x unified',
