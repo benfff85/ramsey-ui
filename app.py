@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_autorefresh import st_autorefresh
 import requests
 import pandas as pd
 import plotly.express as px
@@ -13,6 +14,9 @@ st.set_page_config(
     page_icon="📈",
     layout="wide"
 )
+
+# Auto-refresh every 300 seconds (5 minutes)
+st_autorefresh(interval=300000, key="datarefresh")
 
 # API Configuration
 api_base_url = os.environ.get("API_BASE_URL", "http://localhost:36000")
