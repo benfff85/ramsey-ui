@@ -5,6 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 import os
+import redis
 
 # App configuration
 st.set_page_config(
@@ -14,7 +15,41 @@ st.set_page_config(
 )
 
 # API Configuration
-api_base_url = os.environ.get("API_BASE_URL", "http://localhost:4040")
+api_base_url = os.environ.get("API_BASE_URL", "http://localhost:36000")
+
+# Redis Configuration
+redis_host = os.environ.get("REDIS_HOST", "localhost")
+redis_port = int(os.environ.get("REDIS_PORT", "6379"))
+
+
+def get_redis_client():
+    """Create Redis client connection."""
+    try:
+        return redis.Redis(host=redis_host, port=redis_port, decode_responses=True)
+    except Exception as e:
+        st.warning(f"Could not connect to Redis: {e}")
+        return None
+
+
+def get_processed_count(redis_client, stage_id: int):
+    """Get processed work unit count from Redis."""
+    if not redis_client:
+        return None
+    try:
+        count = redis_client.get(f"processed_count:{stage_id}")
+        return int(count) if count else 0
+    except Exception:
+        return None
+
+
+def get_queue_depth(redis_client, stage_id: int):
+    """Get current queue depth from Redis."""
+    if not redis_client:
+        return None
+    try:
+        return redis_client.llen(f"work_queue:{stage_id}")
+    except Exception:
+        return None
 
 
 def fetch_stages(campaign_id: int, limit: int = 50):
@@ -136,6 +171,26 @@ with col3:
 with col4:
     st.metric("Stages Analyzed", f"{len(df):,}")
 
+# Identify active stage for Redis metrics and chart highlighting
+active_stages = df[df['status'] == 'ACTIVE']
+
+# Redis metrics for active stage
+redis_client = get_redis_client()
+if redis_client and not active_stages.empty:
+    active_stage_id = int(active_stages.iloc[0]['stage_id'])
+    
+    col5, col6 = st.columns(2)
+    
+    with col5:
+        processed = get_processed_count(redis_client, active_stage_id)
+        if processed is not None:
+            st.metric("Work Units Processed (Stage " + str(active_stage_id) + ")", f"{processed:,}")
+    
+    with col6:
+        queue_depth = get_queue_depth(redis_client, active_stage_id)
+        if queue_depth is not None:
+            st.metric("Queue Depth", f"{queue_depth:,}")
+
 st.markdown("---")
 
 # Main chart - Clique Count over Stages
@@ -158,8 +213,7 @@ fig.add_trace(go.Scatter(
     )
 ))
 
-# Highlight active stage
-active_stages = df[df['status'] == 'ACTIVE']
+# Highlight active stage on chart
 if not active_stages.empty:
     fig.add_trace(go.Scatter(
         x=active_stages['stage_id'],
