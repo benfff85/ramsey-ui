@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 import os
 import redis
+import time
 
 # App configuration
 st.set_page_config(
@@ -15,8 +16,8 @@ st.set_page_config(
     layout="wide"
 )
 
-# Auto-refresh every 300 seconds (5 minutes)
-st_autorefresh(interval=300000, key="datarefresh")
+# Auto-refresh every 30 seconds
+st_autorefresh(interval=30000, key="datarefresh")
 
 # API Configuration
 api_base_url = os.environ.get("API_BASE_URL", "http://localhost:36000")
@@ -73,8 +74,9 @@ def fetch_stages(campaign_id: int, limit: int = 50):
         return []
 
 
+@st.cache_data(ttl=None)  # Cache forever - graph data never changes
 def fetch_graph(graph_id: int):
-    """Fetch a graph by ID to get clique count."""
+    """Fetch a graph by ID to get clique count. Cached permanently since graphs don't change."""
     url = f"{api_base_url}/api/ramsey/graphs/{graph_id}"
     
     try:
@@ -119,7 +121,7 @@ with st.sidebar:
     campaign_id = int(os.environ.get("RAMSEY_CAMPAIGN_ID", "1"))
     st.info(f"Campaign ID: {campaign_id}")
     
-    max_stages = st.slider("Max Stages to Display", min_value=10, max_value=100, value=50)
+    max_stages = st.slider("Max Stages to Display", min_value=10, max_value=500, value=50)
     
     if st.button("🔄 Refresh"):
         st.rerun()
@@ -183,17 +185,47 @@ redis_client = get_redis_client()
 if redis_client and not active_stages.empty:
     active_stage_id = int(active_stages.iloc[0]['stage_id'])
     
-    col5, col6 = st.columns(2)
+    processed = get_processed_count(redis_client, active_stage_id)
+    queue_depth = get_queue_depth(redis_client, active_stage_id)
+    
+    # Calculate throughput from previous refresh
+    throughput = None
+    elapsed = None
+    if processed is not None and 'prev_processed_count' in st.session_state:
+        prev_count = st.session_state.prev_processed_count
+        prev_time = st.session_state.prev_refresh_time
+        prev_stage = st.session_state.get('prev_stage_id', active_stage_id)
+        
+        now = time.time()
+        elapsed = now - prev_time
+        count_diff = processed - prev_count
+        
+        # Only show if same stage, positive diff, and at least 5 seconds elapsed
+        if prev_stage == active_stage_id and count_diff >= 0 and elapsed >= 5:
+            throughput = count_diff / elapsed
+    
+    # Store current values for next refresh
+    if processed is not None:
+        st.session_state.prev_processed_count = processed
+        st.session_state.prev_refresh_time = time.time()
+        st.session_state.prev_stage_id = active_stage_id
+    
+    col5, col6, col7 = st.columns(3)
     
     with col5:
-        processed = get_processed_count(redis_client, active_stage_id)
         if processed is not None:
             st.metric("Work Units Processed (Stage " + str(active_stage_id) + ")", f"{processed:,}")
     
     with col6:
-        queue_depth = get_queue_depth(redis_client, active_stage_id)
         if queue_depth is not None:
             st.metric("Queue Depth", f"{queue_depth:,}")
+    
+    with col7:
+        if throughput is not None:
+            st.metric("Throughput", f"{throughput:,.0f}/sec", 
+                     delta=f"over {elapsed:.0f}s")
+        else:
+            st.metric("Throughput", "—", delta="refresh to calculate")
 
 st.markdown("---")
 
