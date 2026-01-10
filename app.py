@@ -121,7 +121,7 @@ with st.sidebar:
     campaign_id = int(os.environ.get("RAMSEY_CAMPAIGN_ID", "1"))
     st.info(f"Campaign ID: {campaign_id}")
     
-    max_stages = st.slider("Max Stages to Display", min_value=10, max_value=500, value=50)
+    max_stages = st.slider("Max Stages to Display", min_value=10, max_value=2500, value=50)
     
     if st.button("🔄 Refresh"):
         st.rerun()
