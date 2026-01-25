@@ -47,14 +47,25 @@ def get_processed_count(redis_client, stage_id: int):
         return None
 
 
-def get_queue_depth(redis_client, stage_id: int):
-    """Get current queue depth from Redis."""
+def get_stage_progress(redis_client, stage_id: int):
+    """Get stage progress (current index / total pairs) from Redis."""
     if not redis_client:
-        return None
+        return None, None
     try:
-        return redis_client.llen(f"work_queue:{stage_id}")
+        import json
+        current_index = redis_client.get(f"stage_work_index:{stage_id}")
+        config_json = redis_client.get(f"stage_config:{stage_id}")
+        
+        if current_index is None or config_json is None:
+            return None, None
+        
+        current = int(current_index)
+        config = json.loads(config_json)
+        total = config.get('totalPairs', 0)
+        
+        return current, total
     except Exception:
-        return None
+        return None, None
 
 
 def fetch_progression(campaign_id: int):
@@ -158,7 +169,7 @@ if redis_client and not active_stages.empty:
     active_stage_id = int(active_stages.iloc[0]['stage_id'])
     
     processed = get_processed_count(redis_client, active_stage_id)
-    queue_depth = get_queue_depth(redis_client, active_stage_id)
+    current_index, total_pairs = get_stage_progress(redis_client, active_stage_id)
     
     # Calculate throughput from previous refresh
     throughput = None
@@ -189,8 +200,9 @@ if redis_client and not active_stages.empty:
             st.metric("Work Units Processed (Stage " + str(active_stage_id) + ")", f"{processed:,}")
     
     with col6:
-        if queue_depth is not None:
-            st.metric("Queue Depth", f"{queue_depth:,}")
+        if current_index is not None and total_pairs is not None and total_pairs > 0:
+            progress_pct = min(100.0, (current_index / total_pairs) * 100)
+            st.metric("Stage Progress", f"{progress_pct:.1f}%", delta=f"{current_index:,} / {total_pairs:,}")
     
     with col7:
         if throughput is not None:
