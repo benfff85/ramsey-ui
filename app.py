@@ -201,8 +201,10 @@ if redis_client and not active_stages.empty:
     
     with col6:
         if current_index is not None and total_pairs is not None and total_pairs > 0:
+            # Cap display at total_pairs (counter may exceed due to race conditions)
+            display_index = min(current_index, total_pairs)
             progress_pct = min(100.0, (current_index / total_pairs) * 100)
-            st.metric("Stage Progress", f"{progress_pct:.1f}%", delta=f"{current_index:,} / {total_pairs:,}")
+            st.metric("Stage Progress", f"{progress_pct:.1f}%", delta=f"{display_index:,} / {total_pairs:,}")
     
     with col7:
         if throughput is not None:
