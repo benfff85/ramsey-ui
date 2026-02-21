@@ -68,6 +68,50 @@ def get_stage_progress(redis_client, stage_id: int):
         return None, None
 
 
+def get_best_results(redis_client, stage_id: int, limit: int = 10):
+    """Get the top N best results (lowest clique count) from Redis sorted set."""
+    if not redis_client:
+        return []
+        
+    try:
+        # zrange with withscores=True returns list of (member, score) tuples
+        # range 0 to limit-1 gets the top 'limit' items (lowest scores)
+        results = redis_client.zrange(
+            f"best_results:{stage_id}", 
+            0, 
+            limit - 1, 
+            withscores=True
+        )
+        
+        parsed_results = []
+        import json
+        
+        for member, score in results:
+            try:
+                data = json.loads(member)
+                # Format edges for display: [(u, v), ...]
+                edges = []
+                if 'edgesToFlip' in data:
+                    for edge in data['edgesToFlip']:
+                        u = edge.get('vertexOne') or edge.get('vertex_one')
+                        v = edge.get('vertexTwo') or edge.get('vertex_two')
+                        if u is not None and v is not None:
+                            edges.append((u, v))
+                            
+                parsed_results.append({
+                    'clique_count': int(score),
+                    'edges': str(edges),
+                    'timestamp': datetime.now().strftime("%H:%M:%S") # Proxy since we don't store time
+                })
+            except json.JSONDecodeError:
+                continue
+                
+        return parsed_results
+    except Exception as e:
+        print(f"Error fetching best results: {e}")
+        return []
+
+
 def fetch_progression(campaign_id: int):
     """Fetch progression data for a campaign."""
     url = f"{api_base_url}/api/ramsey/campaigns/{campaign_id}/progression"
@@ -212,6 +256,25 @@ if redis_client and not active_stages.empty:
                      delta=f"over {elapsed:.0f}s")
         else:
             st.metric("Throughput", "—", delta="refresh to calculate")
+
+    # Best Results
+    st.markdown("### 🏆 Top 10 Best Results (Lowest Clique Counts)")
+    best_results = get_best_results(redis_client, active_stage_id)
+    
+    if best_results:
+        best_df = pd.DataFrame(best_results)
+        
+        # Calculate diff from current stage count
+        current_clique_count = current['clique_count']
+        best_df['diff'] = best_df['clique_count'] - current_clique_count
+        
+        # Reorder columns
+        best_df = best_df[['clique_count', 'diff', 'edges']]
+        best_df.columns = ['Clique Count', 'Diff vs Current', 'Edges to Flip']
+        best_df.index += 1 # 1-based ranking
+        st.dataframe(best_df, width='stretch')
+    else:
+        st.info("No results submitted yet for this stage.")
 
 st.markdown("---")
 
