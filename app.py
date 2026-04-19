@@ -388,7 +388,7 @@ if not df_improvements.empty:
     colors = ['#2ecc71' if x > 0 else '#e74c3c' for x in df_improvements['improvement']]
     
     fig2 = go.Figure(go.Bar(
-        x=df_improvements['stage_id'],
+        x=df_improvements['stage_id'].astype(str),
         y=df_improvements['improvement'],
         marker_color=colors,
         hovertemplate=(
@@ -397,11 +397,12 @@ if not df_improvements.empty:
             '<extra></extra>'
         )
     ))
-    
+
     fig2.update_layout(
         xaxis_title="Stage ID",
         yaxis_title="Cliques Reduced",
-        height=300
+        height=300,
+        xaxis=dict(type='category')
     )
     
     st.plotly_chart(fig2, width='stretch')
