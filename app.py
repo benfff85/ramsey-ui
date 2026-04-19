@@ -112,6 +112,19 @@ def get_best_results(redis_client, stage_id: int, limit: int = 10):
         return []
 
 
+@st.cache_data(ttl=60)
+def fetch_campaigns():
+    """Fetch all campaigns from the middleware. Cached for 60s."""
+    url = f"{api_base_url}/api/ramsey/campaigns"
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        st.error(f"Failed to fetch campaigns: {e}")
+        return []
+
+
 def fetch_progression(campaign_id: int):
     """Fetch progression data for a campaign."""
     url = f"{api_base_url}/api/ramsey/campaigns/{campaign_id}/progression"
@@ -141,14 +154,46 @@ def fetch_progression(campaign_id: int):
 # Sidebar
 with st.sidebar:
     st.header("Configuration")
-    campaign_id = int(os.environ.get("RAMSEY_CAMPAIGN_ID", "1"))
-    st.info(f"Campaign ID: {campaign_id}")
-    
+
+    campaigns = fetch_campaigns()
+    default_campaign_id = int(os.environ.get("RAMSEY_CAMPAIGN_ID", "1"))
+
+    if campaigns:
+        # ACTIVE first, then most recent campaign_id first
+        campaigns_sorted = sorted(
+            campaigns,
+            key=lambda c: (0 if c.get('status') == 'ACTIVE' else 1, -int(c.get('campaignId', 0)))
+        )
+
+        def _label(c):
+            return (
+                f"#{c.get('campaignId')} — {c.get('vertexCount')}v / k={c.get('subgraphSize')} "
+                f"({c.get('status')})"
+            )
+
+        labels = [_label(c) for c in campaigns_sorted]
+        ids = [int(c.get('campaignId')) for c in campaigns_sorted]
+
+        # Pick the env-var default if present, otherwise first option
+        default_idx = ids.index(default_campaign_id) if default_campaign_id in ids else 0
+
+        selected_label = st.selectbox(
+            "Campaign",
+            labels,
+            index=default_idx,
+            key="selected_campaign_label",
+        )
+        campaign_id = ids[labels.index(selected_label)]
+    else:
+        campaign_id = default_campaign_id
+        st.info(f"Campaign ID: {campaign_id} (no campaign list available)")
+
     max_stages = st.slider("Max Stages to Display", min_value=10, max_value=2500, value=50)
-    
+
     if st.button("🔄 Refresh"):
+        fetch_campaigns.clear()
         st.rerun()
-    
+
     st.write(f"Last updated: {datetime.now().strftime('%H:%M:%S')}")
 
 
