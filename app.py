@@ -156,13 +156,28 @@ with st.sidebar:
     st.header("Configuration")
 
     campaigns = fetch_campaigns()
-    default_campaign_id = int(os.environ.get("RAMSEY_CAMPAIGN_ID", "1"))
+    # Only an explicitly-set env var overrides the default; otherwise default to the
+    # latest-updated ACTIVE campaign on page load.
+    env_campaign_id = os.environ.get("RAMSEY_CAMPAIGN_ID")
 
     if campaigns:
-        # ACTIVE first, then most recent campaign_id first
+        def _updated_ts(c):
+            raw = c.get('updatedDate') or c.get('createdDate')
+            if not raw:
+                return 0.0
+            try:
+                return datetime.fromisoformat(str(raw).replace('Z', '+00:00')).timestamp()
+            except Exception:
+                return 0.0
+
+        # ACTIVE first, then most-recently-updated first (campaignId as final tiebreak)
         campaigns_sorted = sorted(
             campaigns,
-            key=lambda c: (0 if c.get('status') == 'ACTIVE' else 1, -int(c.get('campaignId', 0)))
+            key=lambda c: (
+                0 if c.get('status') == 'ACTIVE' else 1,
+                -_updated_ts(c),
+                -int(c.get('campaignId', 0)),
+            )
         )
 
         def _label(c):
@@ -174,8 +189,11 @@ with st.sidebar:
         labels = [_label(c) for c in campaigns_sorted]
         ids = [int(c.get('campaignId')) for c in campaigns_sorted]
 
-        # Pick the env-var default if present, otherwise first option
-        default_idx = ids.index(default_campaign_id) if default_campaign_id in ids else 0
+        # Default to the latest-updated active campaign (top of the sorted list);
+        # honor RAMSEY_CAMPAIGN_ID only when it is explicitly set and present.
+        default_idx = 0
+        if env_campaign_id and env_campaign_id.isdigit() and int(env_campaign_id) in ids:
+            default_idx = ids.index(int(env_campaign_id))
 
         selected_label = st.selectbox(
             "Campaign",
@@ -185,10 +203,10 @@ with st.sidebar:
         )
         campaign_id = ids[labels.index(selected_label)]
     else:
-        campaign_id = default_campaign_id
+        campaign_id = int(env_campaign_id) if (env_campaign_id and env_campaign_id.isdigit()) else 1
         st.info(f"Campaign ID: {campaign_id} (no campaign list available)")
 
-    max_stages = st.slider("Max Stages to Display", min_value=10, max_value=2500, value=50)
+    max_stages = st.slider("Max Stages to Display", min_value=10, max_value=2500, value=250)
 
     if st.button("🔄 Refresh"):
         fetch_campaigns.clear()
