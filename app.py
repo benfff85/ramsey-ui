@@ -68,24 +68,25 @@ def get_stage_progress(redis_client, stage_id: int):
         return None, None
 
 
-def get_best_results(redis_client, stage_id: int, limit: int = 10):
-    """Get the top N best results (lowest clique count) from Redis sorted set."""
+def get_best_results(redis_client, stage_id: int):
+    """Get all best *novel* results (lowest clique count) from the Redis sorted set.
+    The set is already capped at TOP_RESULTS_COUNT by the worker's trim, so we
+    return everything retained (best first) rather than a fixed top-N."""
     if not redis_client:
         return []
-        
+
     try:
-        # zrange with withscores=True returns list of (member, score) tuples
-        # range 0 to limit-1 gets the top 'limit' items (lowest scores)
+        # zrange 0..-1 returns the whole set (lowest scores first), with scores.
         results = redis_client.zrange(
-            f"best_results:{stage_id}", 
-            0, 
-            limit - 1, 
+            f"best_results:{stage_id}",
+            0,
+            -1,
             withscores=True
         )
-        
+
         parsed_results = []
         import json
-        
+
         for member, score in results:
             try:
                 data = json.loads(member)
@@ -97,15 +98,24 @@ def get_best_results(redis_client, stage_id: int, limit: int = 10):
                         v = edge.get('vertexTwo') or edge.get('vertex_two')
                         if u is not None and v is not None:
                             edges.append((u, v))
-                            
+
+                # Legacy SA/VDS/tabu results carry a full graphBitstring instead of
+                # edges; show something meaningful rather than an empty "[]".
+                if edges:
+                    edges_display = str(edges)
+                elif data.get('graphBitstring'):
+                    edges_display = "(full-graph result)"
+                else:
+                    edges_display = "—"
+
                 parsed_results.append({
                     'clique_count': int(score),
-                    'edges': str(edges),
+                    'edges': edges_display,
                     'timestamp': datetime.now().strftime("%H:%M:%S") # Proxy since we don't store time
                 })
             except json.JSONDecodeError:
                 continue
-                
+
         return parsed_results
     except Exception as e:
         print(f"Error fetching best results: {e}")
@@ -321,8 +331,11 @@ if redis_client and not active_stages.empty:
             st.metric("Throughput", "—", delta="refresh to calculate")
 
     # Best Results
-    st.markdown("### 🏆 Top 10 Best Results (Lowest Clique Counts)")
     best_results = get_best_results(redis_client, active_stage_id)
+    st.markdown(
+        f"### 🏆 Best Novel Results — {len(best_results)} retained "
+        "(lowest clique counts, unvisited)"
+    )
     
     if best_results:
         best_df = pd.DataFrame(best_results)
