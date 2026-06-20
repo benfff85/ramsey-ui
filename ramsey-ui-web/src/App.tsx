@@ -3,6 +3,10 @@ import { api } from './api';
 import { Sidebar, type Interval } from './components/Sidebar';
 import { StatCards, sortCampaigns } from './components/StatCards';
 import { ThroughputChart } from './components/ThroughputChart';
+import { CliqueProgressionChart } from './components/CliqueProgressionChart';
+import { ImprovementChart } from './components/ImprovementChart';
+import { BestResultsTable } from './components/BestResultsTable';
+import { RawDataTable } from './components/RawDataTable';
 import { useThroughputSocket } from './useThroughputSocket';
 import type { CampaignDto, ProgressionPointDto, LiveStageDto } from './types';
 
@@ -53,7 +57,16 @@ export default function App() {
           <StatCards current={current} first={first} liveStage={liveStage} unitsPerSec={latestUps} />
         )}
         <ThroughputChart samples={samples} interval={interval} />
-        {/* historical charts + tables (Task 12) mount here */}
+        {progression.length > 0 && (
+          <>
+            <div className="grid-2">
+              <CliqueProgressionChart progression={progression} />
+              <ImprovementChart progression={progression} />
+            </div>
+            <BestResultsTable liveStage={liveStage} currentClique={current?.cliqueCount ?? 0} />
+            <RawDataTable progression={progression} />
+          </>
+        )}
       </main>
     </div>
   );
