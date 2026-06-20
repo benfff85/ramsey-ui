@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api } from './api';
 import { Sidebar, type Interval } from './components/Sidebar';
 import { StatCards, sortCampaigns } from './components/StatCards';
+import { ThroughputChart } from './components/ThroughputChart';
 import { useThroughputSocket } from './useThroughputSocket';
 import type { CampaignDto, ProgressionPointDto, LiveStageDto } from './types';
 
@@ -51,7 +52,8 @@ export default function App() {
         {current && first && (
           <StatCards current={current} first={first} liveStage={liveStage} unitsPerSec={latestUps} />
         )}
-        {/* throughput hero (Task 11) and historical charts + tables (Task 12) mount here */}
+        <ThroughputChart samples={samples} interval={interval} />
+        {/* historical charts + tables (Task 12) mount here */}
       </main>
     </div>
   );
