@@ -1,5 +1,6 @@
 com/setminusx/ramsey/ui/redis/RedisLiveStageServiceTest.class
 com/setminusx/ramsey/ui/client/MwClientTest.class
 com/setminusx/ramsey/ui/SpaServingTest.class
+com/setminusx/ramsey/ui/sampler/ThroughputBufferTest.class
 com/setminusx/ramsey/ui/sampler/ActiveStageResolverTest.class
 com/setminusx/ramsey/ui/sampler/ActiveStageResolverTest$MutableClock.class
