@@ -1,43 +1,40 @@
-# Ramsey UI
+# ramsey-ui
 
-A Streamlit dashboard for visualizing clique count progression across stages in the Ramsey distributed computing system.
+Real-time dashboard for the Ramsey search. A multi-module Maven project:
 
-## Features
+- **`ramsey-ui-web`** — React + TypeScript (Vite) single-page app, built by Maven.
+- **`ramsey-ui-rest`** — Spring Boot **read-only** backend-for-frontend. Reads Redis
+  live counters, proxies `ramsey-mw` for campaign/progression history, samples
+  work-units/sec into an in-memory ring buffer, and streams it to the UI over a STOMP
+  WebSocket. It never writes — `ramsey-mw` still owns all persistence.
 
-- **Clique Count Progression Chart**: Line graph showing how clique count decreases over stages
-- **Improvement Metrics**: Current stage, clique count, total improvement
-- **Per-Stage Improvement Bars**: Visualize how much each stage improved
+The web bundle is packaged into the backend jar (`META-INF/resources`), so the whole
+dashboard ships as a single container on port **36003**.
 
-## Environment Variables
+## Build & run
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `API_BASE_URL` | Middleware API URL | `http://localhost:4040` |
-| `RAMSEY_CAMPAIGN_ID` | Campaign ID to monitor | `1` |
+    mvn clean package
+    java -jar ramsey-ui-rest/target/ramsey-ui-rest-0.1.0.jar
+    # open http://localhost:8080
 
-## Running Locally
+Frontend dev server (hot reload; proxies `/api` and `/ws` to the backend on :8080):
 
-```bash
-pip install -r requirements.txt
-streamlit run app.py
-```
+    cd ramsey-ui-web && npm install && npm run dev
+
+Run the tests:
+
+    mvn test                              # backend (JUnit)
+    cd ramsey-ui-web && npm test          # frontend (Vitest)
+
+## Configuration (environment)
+
+| Var | Default | Meaning |
+|-----|---------|---------|
+| `API_BASE_URL` | `http://localhost:36000` | `ramsey-mw` base URL |
+| `REDIS_HOST` / `REDIS_PORT` | `localhost` / `6379` | Redis (Dragonfly) |
 
 ## Docker
 
-Build:
-```bash
-docker build -t benferenchak/ramsey-ui:develop .
-```
+    docker build -t benferenchak/ramsey-ui:develop .
 
-Run:
-```bash
-docker run -p 8501:8501 -e API_BASE_URL=http://ramsey-mw:8080 benferenchak/ramsey-ui:develop
-```
-
-## Screenshot
-
-The dashboard displays:
-- Current stage number and clique count
-- Total improvement from first to current stage
-- Interactive line chart of progression
-- Bar chart showing improvement per stage transition
+The container listens on port `8080`; the compose stack maps host `36003:8080`.
