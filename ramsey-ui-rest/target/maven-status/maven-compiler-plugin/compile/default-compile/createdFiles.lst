@@ -2,6 +2,7 @@ com/setminusx/ramsey/ui/model/LiveStageDto.class
 com/setminusx/ramsey/ui/model/BestResultDto.class
 com/setminusx/ramsey/ui/redis/StageKeys.class
 com/setminusx/ramsey/ui/redis/StageCounterReader.class
+com/setminusx/ramsey/ui/sampler/ActiveStageResolver.class
 com/setminusx/ramsey/ui/client/MwClient.class
 com/setminusx/ramsey/ui/config/RamseyProperties$Throughput.class
 com/setminusx/ramsey/ui/config/RestClientConfig.class

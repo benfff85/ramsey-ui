@@ -10,3 +10,4 @@
 /Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest/src/main/java/com/setminusx/ramsey/ui/redis/RedisLiveStageService.java
 /Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest/src/main/java/com/setminusx/ramsey/ui/redis/StageCounterReader.java
 /Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest/src/main/java/com/setminusx/ramsey/ui/redis/StageKeys.java
+/Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest/src/main/java/com/setminusx/ramsey/ui/sampler/ActiveStageResolver.java

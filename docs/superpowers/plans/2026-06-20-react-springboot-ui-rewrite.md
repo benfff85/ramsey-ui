@@ -1005,7 +1005,9 @@ public class ActiveStageResolver {
     private final Clock clock;
 
     private Integer cachedStageId;
-    private long cachedAtMillis = Long.MIN_VALUE;
+    private long cachedAtMillis;
+    private boolean cached; // gate the freshness check so the first call always computes
+                            // (avoids Long.MIN_VALUE sentinel overflow in now - cachedAtMillis)
 
     public ActiveStageResolver(MwClient mw, Clock clock) {
         this.mw = mw;
@@ -1014,7 +1016,7 @@ public class ActiveStageResolver {
 
     public synchronized Integer resolveActiveStageId() {
         long now = clock.millis();
-        if (now - cachedAtMillis < CACHE_MILLIS) {
+        if (cached && now - cachedAtMillis < CACHE_MILLIS) {
             return cachedStageId;
         }
         try {
@@ -1023,6 +1025,7 @@ public class ActiveStageResolver {
             cachedStageId = null; // mw unreachable -> no active stage; sampler emits 0
         }
         cachedAtMillis = now;
+        cached = true;
         return cachedStageId;
     }
 
