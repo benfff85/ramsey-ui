@@ -43,7 +43,11 @@ export default function App() {
     return () => { alive = false; clearInterval(h); };
   }, [activeStage?.stageId]);
 
-  const latestUps = samples.length ? samples[samples.length - 1].unitsPerSec : 0;
+  // Smooth the headline stat over the last few samples so a single transient 0 at the
+  // live tail doesn't flicker the card to zero while work is clearly flowing.
+  const recentUps = samples.length
+    ? samples.slice(-5).reduce((a, s) => a + s.unitsPerSec, 0) / Math.min(5, samples.length)
+    : 0;
   const current = sortedProg[sortedProg.length - 1];
   const first = sortedProg[0];
 
@@ -54,7 +58,7 @@ export default function App() {
                lastUpdated={new Date().toLocaleTimeString()} connected={connected} />
       <main className="main">
         {current && first && (
-          <StatCards current={current} first={first} liveStage={liveStage} unitsPerSec={latestUps} />
+          <StatCards current={current} first={first} liveStage={liveStage} unitsPerSec={recentUps} />
         )}
         <ThroughputChart samples={samples} interval={interval} />
         {progression.length > 0 && (
