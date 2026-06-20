@@ -43,7 +43,7 @@ current dashboard.
 
 ```
 ramsey-ui/                 parent pom (packaging=pom)
-├── ramsey-ui-rest/        Spring Boot 4.0.5 / Java 25 — BFF + WebSocket + sampler
+├── ramsey-ui-rest/        Spring Boot 4.1.0 / Java 25 — BFF + WebSocket + sampler
 └── ramsey-ui-web/         React + TypeScript (Vite) — built by Maven, bundled into -rest
 ```
 
@@ -194,7 +194,8 @@ Modern dark dashboard, applied via the frontend-design skill at build time:
 
 - **Throughput source reliability** — mitigated by the constant-key fallback to
   `stage_work_index` (see sampler note).
-- **Java 25 / Spring Boot 4.0.5 toolchain** for a brand-new module — must match the mw/qm
-  setup; verify the frontend-maven-plugin + Node version build cleanly in Docker.
+- **Java 25 / Spring Boot 4.1.0 toolchain** for a brand-new module — must match the mw/qm
+  setup (Spring Boot 4.1.0, Jackson 3 `tools.jackson`, maven-compiler-plugin release 25);
+  verify the frontend-maven-plugin + Node version build cleanly in Docker.
 - **In-memory history loss on restart** — accepted; the counter is cumulative so u/s
   resumes immediately on the next tick.
