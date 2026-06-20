@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.setminusx.ramsey.ui.sampler.ThroughputSamplerTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.787 s -- in com.setminusx.ramsey.ui.sampler.ThroughputSamplerTest
