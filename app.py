@@ -94,8 +94,14 @@ def get_best_results(redis_client, stage_id: int):
                 edges = []
                 if 'edgesToFlip' in data:
                     for edge in data['edgesToFlip']:
-                        u = edge.get('vertexOne') or edge.get('vertex_one')
-                        v = edge.get('vertexTwo') or edge.get('vertex_two')
+                        # NB: use None-coalescing, not `a or b` — vertex 0 is falsy
+                        # and `0 or ...` would wrongly drop edges involving vertex 0.
+                        u = edge.get('vertexOne')
+                        if u is None:
+                            u = edge.get('vertex_one')
+                        v = edge.get('vertexTwo')
+                        if v is None:
+                            v = edge.get('vertex_two')
                         if u is not None and v is not None:
                             edges.append((u, v))
 
