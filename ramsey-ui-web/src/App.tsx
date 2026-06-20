@@ -1,0 +1,77 @@
+import { useEffect, useState } from 'react';
+import { api } from './api';
+import { Sidebar, type Interval } from './components/Sidebar';
+import { StatCards, sortCampaigns } from './components/StatCards';
+import { ThroughputChart } from './components/ThroughputChart';
+import { CliqueProgressionChart } from './components/CliqueProgressionChart';
+import { ImprovementChart } from './components/ImprovementChart';
+import { BestResultsTable } from './components/BestResultsTable';
+import { RawDataTable } from './components/RawDataTable';
+import { useThroughputSocket } from './useThroughputSocket';
+import type { CampaignDto, ProgressionPointDto, LiveStageDto } from './types';
+
+export default function App() {
+  const [campaigns, setCampaigns] = useState<CampaignDto[]>([]);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [progression, setProgression] = useState<ProgressionPointDto[]>([]);
+  const [liveStage, setLiveStage] = useState<LiveStageDto | null>(null);
+  const [interval, setIntervalSec] = useState<Interval>(5);
+  const { samples, connected } = useThroughputSocket();
+
+  useEffect(() => {
+    api.getCampaigns().then((cs) => {
+      setCampaigns(cs);
+      const sorted = sortCampaigns(cs);
+      if (sorted.length) setSelectedId(sorted[0].campaignId);
+    }).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (selectedId == null) return;
+    api.getProgression(selectedId).then(setProgression).catch(() => undefined);
+  }, [selectedId]);
+
+  const sortedProg = [...progression].sort((a, b) => a.stageId - b.stageId);
+  const activeStage = progression.find((p) => p.status === 'ACTIVE') ?? null;
+
+  useEffect(() => {
+    if (!activeStage) { setLiveStage(null); return; }
+    let alive = true;
+    const tick = () => api.getLiveStage(activeStage.stageId).then((d) => { if (alive) setLiveStage(d); }).catch(() => undefined);
+    tick();
+    const h = setInterval(tick, 5000);
+    return () => { alive = false; clearInterval(h); };
+  }, [activeStage?.stageId]);
+
+  // Smooth the headline stat over the last few samples so a single transient 0 at the
+  // live tail doesn't flicker the card to zero while work is clearly flowing.
+  const recentUps = samples.length
+    ? samples.slice(-5).reduce((a, s) => a + s.unitsPerSec, 0) / Math.min(5, samples.length)
+    : 0;
+  const current = sortedProg[sortedProg.length - 1];
+  const first = sortedProg[0];
+
+  return (
+    <div className="app">
+      <Sidebar campaigns={campaigns} selectedId={selectedId} onSelect={setSelectedId}
+               interval={interval} onIntervalChange={setIntervalSec}
+               lastUpdated={new Date().toLocaleTimeString()} connected={connected} />
+      <main className="main">
+        {current && first && (
+          <StatCards current={current} first={first} liveStage={liveStage} unitsPerSec={recentUps} />
+        )}
+        <ThroughputChart samples={samples} interval={interval} />
+        {progression.length > 0 && (
+          <>
+            <div className="grid-2">
+              <CliqueProgressionChart progression={progression} />
+              <ImprovementChart progression={progression} />
+            </div>
+            <BestResultsTable liveStage={liveStage} currentClique={current?.cliqueCount ?? 0} />
+            <RawDataTable progression={progression} />
+          </>
+        )}
+      </main>
+    </div>
+  );
+}

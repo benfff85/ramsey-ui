@@ -1,0 +1,9 @@
+**/target/
+**/node_modules/
+**/dist/
+**/.git/
+__pycache__/
+*.iml
+docs/
+*.log
+.DS_Store

@@ -1,0 +1,24 @@
+server:
+  port: ${SERVER_PORT:8501}   # 8501 = drop-in replacement for the old Streamlit container port
+spring:
+  application:
+    name: ramsey-ui-rest
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+management:
+  health:
+    redis:
+      enabled: false   # dashboard is read-only; Redis being down degrades data, not liveness
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+ramsey:
+  api-base-url: ${API_BASE_URL:http://localhost:36000}
+  sampler:
+    interval-ms: 1000
+  throughput:
+    buffer-capacity: 7200
+    default-window-seconds: 7200
