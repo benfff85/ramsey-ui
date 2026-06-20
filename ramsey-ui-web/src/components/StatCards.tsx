@@ -25,9 +25,8 @@ function Stat({ label, value, unit, sub, subClass, primary }: {
   );
 }
 
-export function StatCards({ current, first, liveStage, unitsPerSec }: {
-  current: ProgressionPointDto; first: ProgressionPointDto;
-  liveStage: LiveStageDto | null; unitsPerSec: number;
+export function StatCards({ current, first, liveStage }: {
+  current: ProgressionPointDto; first: ProgressionPointDto; liveStage: LiveStageDto | null;
 }) {
   // positive improvement = clique count dropped from the start of the campaign
   const improvement = first.cliqueCount - current.cliqueCount;
@@ -42,7 +41,6 @@ export function StatCards({ current, first, liveStage, unitsPerSec }: {
             sub={liveStage
               ? `${fmt(Math.min(liveStage.workIndex, liveStage.totalPairs))} / ${fmt(liveStage.totalPairs)}`
               : undefined} />
-      <Stat label="Throughput" value={fmt(Math.round(unitsPerSec))} unit="u/s" />
     </div>
   );
 }

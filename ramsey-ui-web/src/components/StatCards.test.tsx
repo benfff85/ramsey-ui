@@ -20,13 +20,12 @@ describe('sortCampaigns', () => {
 });
 
 describe('StatCards', () => {
-  it('renders clique count and current throughput', () => {
+  it('renders clique count and progress', () => {
     const first: ProgressionPointDto = { stageId: 1, graphId: 1, cliqueCount: 800000, status: 'COMPLETE', createdDate: null };
     const current: ProgressionPointDto = { stageId: 42, graphId: 2, cliqueCount: 775623, status: 'ACTIVE', createdDate: null };
     const live: LiveStageDto = { stageId: 42, processedCount: 1500, workIndex: 300, totalPairs: 600, progressPct: 50, bestResults: [] };
-    render(<StatCards current={current} first={first} liveStage={live} unitsPerSec={123} />);
+    render(<StatCards current={current} first={first} liveStage={live} />);
     expect(screen.getByText('775,623')).toBeInTheDocument();
-    expect(screen.getByText(/123/)).toBeInTheDocument();
     expect(screen.getByText('50.0%')).toBeInTheDocument();
   });
 });
