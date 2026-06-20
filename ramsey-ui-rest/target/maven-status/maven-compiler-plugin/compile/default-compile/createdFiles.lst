@@ -1,1 +1,9 @@
+com/setminusx/ramsey/ui/model/LiveStageDto.class
+com/setminusx/ramsey/ui/redis/RedisLiveStageService.class
+com/setminusx/ramsey/ui/model/ThroughputSample.class
+com/setminusx/ramsey/ui/model/BestResultDto.class
+com/setminusx/ramsey/ui/model/ProgressionPointDto.class
+com/setminusx/ramsey/ui/model/CampaignDto.class
+com/setminusx/ramsey/ui/redis/StageKeys.class
+com/setminusx/ramsey/ui/redis/StageCounterReader.class
 com/setminusx/ramsey/ui/Application.class

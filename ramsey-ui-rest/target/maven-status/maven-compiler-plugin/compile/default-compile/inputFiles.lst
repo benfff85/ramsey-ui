@@ -1,1 +1,9 @@
 /Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest/src/main/java/com/setminusx/ramsey/ui/Application.java
+/Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest/src/main/java/com/setminusx/ramsey/ui/model/BestResultDto.java
+/Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest/src/main/java/com/setminusx/ramsey/ui/model/CampaignDto.java
+/Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest/src/main/java/com/setminusx/ramsey/ui/model/LiveStageDto.java
+/Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest/src/main/java/com/setminusx/ramsey/ui/model/ProgressionPointDto.java
+/Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest/src/main/java/com/setminusx/ramsey/ui/model/ThroughputSample.java
+/Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest/src/main/java/com/setminusx/ramsey/ui/redis/RedisLiveStageService.java
+/Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest/src/main/java/com/setminusx/ramsey/ui/redis/StageCounterReader.java
+/Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest/src/main/java/com/setminusx/ramsey/ui/redis/StageKeys.java
