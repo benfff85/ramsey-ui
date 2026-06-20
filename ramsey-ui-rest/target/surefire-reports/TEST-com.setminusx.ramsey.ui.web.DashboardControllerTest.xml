@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.setminusx.ramsey.ui.SpaServingTest" time="3.476" tests="2" errors="0" skipped="0" failures="0" flakes="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.setminusx.ramsey.ui.web.DashboardControllerTest" time="0.052" tests="4" errors="0" skipped="0" failures="0" flakes="0">
   <properties>
     <property name="java.specification.version" value="25"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -69,48 +69,8 @@
     <property name="java.class.version" value="69.0"/>
     <property name="LOGGED_APPLICATION_NAME" value="[ramsey-ui-rest] "/>
   </properties>
-  <testcase name="serves_index_html_at_root" classname="com.setminusx.ramsey.ui.SpaServingTest" time="0.688">
-    <system-out><![CDATA[11:30:47.253 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.setminusx.ramsey.ui.SpaServingTest]: SpaServingTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-11:30:47.336 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.setminusx.ramsey.ui.Application for test class com.setminusx.ramsey.ui.SpaServingTest
-11:30:47.416 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.setminusx.ramsey.ui.SpaServingTest]: SpaServingTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-11:30:47.416 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.setminusx.ramsey.ui.Application for test class com.setminusx.ramsey.ui.SpaServingTest
-
-  .   ____          _            __ _ _
- /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
-( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
- \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
-  '  |____| .__|_| |_|_| |_\__, | / / / /
- =========|_|==============|___/=/_/_/_/
-
- :: Spring Boot ::                (v4.1.0)
-
-2026-06-20T11:30:47.688-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] com.setminusx.ramsey.ui.SpaServingTest   : Starting SpaServingTest using Java 25 with PID 53869 (started by benferenchak in /Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest)
-2026-06-20T11:30:47.689-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] com.setminusx.ramsey.ui.SpaServingTest   : No active profile set, falling back to 1 default profile: "default"
-2026-06-20T11:30:48.220-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
-2026-06-20T11:30:48.221-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-06-20T11:30:48.243-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 6 ms. Found 0 Redis repository interfaces.
-2026-06-20T11:30:48.567-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
-2026-06-20T11:30:48.572-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-06-20T11:30:48.572-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.22]
-2026-06-20T11:30:48.603-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 900 ms
-2026-06-20T11:30:48.915-04:00  WARN 53869 --- [ramsey-ui-rest] [           main] i.n.r.d.DnsServerAddressStreamProviders  : Can not find io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider in the classpath, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'
-2026-06-20T11:30:49.368-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.b.w.a.WelcomePageHandlerMapping      : Adding welcome page: class path resource [META-INF/resources/index.html]
-2026-06-20T11:30:49.658-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoints beneath base path '/actuator'
-2026-06-20T11:30:49.703-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Starting...
-2026-06-20T11:30:49.704-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@7491cdae]]
-2026-06-20T11:30:49.704-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Started.
-2026-06-20T11:30:49.731-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 63077 (http) with context path '/'
-2026-06-20T11:30:49.761-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] com.setminusx.ramsey.ui.SpaServingTest   : Started SpaServingTest in 2.314 seconds (process running for 3.245)
-2026-06-20T11:30:50.455-04:00  INFO 53869 --- [ramsey-ui-rest] [o-auto-1-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2026-06-20T11:30:50.455-04:00  INFO 53869 --- [ramsey-ui-rest] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2026-06-20T11:30:50.455-04:00  INFO 53869 --- [ramsey-ui-rest] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
-]]></system-out>
-    <system-err><![CDATA[Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
-WARNING: A Java agent has been loaded dynamically (/Users/benferenchak/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.10/byte-buddy-agent-1.18.10.jar)
-WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
-WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
-WARNING: Dynamic loading of agents will be disallowed by default in a future release
-]]></system-err>
-  </testcase>
-  <testcase name="health_is_up" classname="com.setminusx.ramsey.ui.SpaServingTest" time="0.059"/>
+  <testcase name="campaigns_delegates_to_mw" classname="com.setminusx.ramsey.ui.web.DashboardControllerTest" time="0.002"/>
+  <testcase name="progression_delegates_to_mw" classname="com.setminusx.ramsey.ui.web.DashboardControllerTest" time="0.001"/>
+  <testcase name="live_delegates_to_redis_service" classname="com.setminusx.ramsey.ui.web.DashboardControllerTest" time="0.003"/>
+  <testcase name="history_filters_by_window" classname="com.setminusx.ramsey.ui.web.DashboardControllerTest" time="0.0"/>
 </testsuite>

@@ -110,4 +110,21 @@ class ThroughputSamplerTest {
                 .containsExactly(0.0, 0.0);
         assertThat(buffer.snapshot().get(1).stageId()).isEqualTo(43);
     }
+
+    @Test
+    void skips_tick_without_emitting_when_counter_read_fails() {
+        ActiveStageResolver resolver = mock(ActiveStageResolver.class);
+        StageCounterReader reader = mock(StageCounterReader.class);
+        ThroughputBroadcaster broadcaster = mock(ThroughputBroadcaster.class);
+        ThroughputBuffer buffer = new ThroughputBuffer(100);
+        when(resolver.resolveActiveStageId()).thenReturn(42);
+        when(reader.readProcessedCount(42)).thenThrow(new RuntimeException("redis down"));
+
+        ThroughputSampler sampler = new ThroughputSampler(resolver, reader, buffer, broadcaster,
+                new MutableClock(Instant.parse("2026-06-20T00:00:00Z")));
+        sampler.sample(); // must not throw
+
+        assertThat(buffer.snapshot()).isEmpty();
+        verifyNoInteractions(broadcaster);
+    }
 }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.setminusx.ramsey.ui.SpaServingTest" time="3.476" tests="2" errors="0" skipped="0" failures="0" flakes="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="com.setminusx.ramsey.ui.sampler.ThroughputWebSocketIT" time="0.997" tests="1" errors="0" skipped="0" failures="0" flakes="0">
   <properties>
     <property name="java.specification.version" value="25"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -56,7 +56,7 @@
     <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
     <property name="PID" value="53869"/>
     <property name="CONSOLE_LOG_CHARSET" value="UTF-8"/>
-    <property name="catalina.base" value="/private/var/folders/kq/vfsvyly144bdw68yq0l6qsc40000gn/T/tomcat.0.5944540696452002418"/>
+    <property name="catalina.base" value="/private/var/folders/kq/vfsvyly144bdw68yq0l6qsc40000gn/T/tomcat.0.8849500801299574836"/>
     <property name="native.encoding" value="UTF-8"/>
     <property name="java.library.path" value="/Users/benferenchak/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:."/>
     <property name="java.vm.info" value="mixed mode, sharing"/>
@@ -69,11 +69,14 @@
     <property name="java.class.version" value="69.0"/>
     <property name="LOGGED_APPLICATION_NAME" value="[ramsey-ui-rest] "/>
   </properties>
-  <testcase name="serves_index_html_at_root" classname="com.setminusx.ramsey.ui.SpaServingTest" time="0.688">
-    <system-out><![CDATA[11:30:47.253 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.setminusx.ramsey.ui.SpaServingTest]: SpaServingTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-11:30:47.336 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.setminusx.ramsey.ui.Application for test class com.setminusx.ramsey.ui.SpaServingTest
-11:30:47.416 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.setminusx.ramsey.ui.SpaServingTest]: SpaServingTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-11:30:47.416 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.setminusx.ramsey.ui.Application for test class com.setminusx.ramsey.ui.SpaServingTest
+  <testcase name="client_receives_broadcast_sample" classname="com.setminusx.ramsey.ui.sampler.ThroughputWebSocketIT" time="0.359">
+    <system-out><![CDATA[2026-06-20T11:30:51.261-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.setminusx.ramsey.ui.sampler.ThroughputWebSocketIT]: ThroughputWebSocketIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-20T11:30:51.292-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.setminusx.ramsey.ui.Application for test class com.setminusx.ramsey.ui.sampler.ThroughputWebSocketIT
+2026-06-20T11:30:51.293-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.setminusx.ramsey.ui.sampler.ThroughputWebSocketIT]: ThroughputWebSocketIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-06-20T11:30:51.293-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.setminusx.ramsey.ui.Application for test class com.setminusx.ramsey.ui.sampler.ThroughputWebSocketIT
+2026-06-20T11:30:51.295-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Stopping...
+2026-06-20T11:30:51.295-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=false, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@7491cdae]]
+2026-06-20T11:30:51.295-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Stopped.
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -84,33 +87,25 @@
 
  :: Spring Boot ::                (v4.1.0)
 
-2026-06-20T11:30:47.688-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] com.setminusx.ramsey.ui.SpaServingTest   : Starting SpaServingTest using Java 25 with PID 53869 (started by benferenchak in /Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest)
-2026-06-20T11:30:47.689-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] com.setminusx.ramsey.ui.SpaServingTest   : No active profile set, falling back to 1 default profile: "default"
-2026-06-20T11:30:48.220-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
-2026-06-20T11:30:48.221-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
-2026-06-20T11:30:48.243-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 6 ms. Found 0 Redis repository interfaces.
-2026-06-20T11:30:48.567-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
-2026-06-20T11:30:48.572-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
-2026-06-20T11:30:48.572-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.22]
-2026-06-20T11:30:48.603-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 900 ms
-2026-06-20T11:30:48.915-04:00  WARN 53869 --- [ramsey-ui-rest] [           main] i.n.r.d.DnsServerAddressStreamProviders  : Can not find io.netty.resolver.dns.macos.MacOSDnsServerAddressStreamProvider in the classpath, fallback to system defaults. This may result in incorrect DNS resolutions on MacOS. Check whether you have a dependency on 'io.netty:netty-resolver-dns-native-macos'
-2026-06-20T11:30:49.368-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.b.w.a.WelcomePageHandlerMapping      : Adding welcome page: class path resource [META-INF/resources/index.html]
-2026-06-20T11:30:49.658-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoints beneath base path '/actuator'
-2026-06-20T11:30:49.703-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Starting...
-2026-06-20T11:30:49.704-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@7491cdae]]
-2026-06-20T11:30:49.704-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Started.
-2026-06-20T11:30:49.731-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 63077 (http) with context path '/'
-2026-06-20T11:30:49.761-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] com.setminusx.ramsey.ui.SpaServingTest   : Started SpaServingTest in 2.314 seconds (process running for 3.245)
-2026-06-20T11:30:50.455-04:00  INFO 53869 --- [ramsey-ui-rest] [o-auto-1-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
-2026-06-20T11:30:50.455-04:00  INFO 53869 --- [ramsey-ui-rest] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
-2026-06-20T11:30:50.455-04:00  INFO 53869 --- [ramsey-ui-rest] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 0 ms
+2026-06-20T11:30:51.398-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] c.s.r.ui.sampler.ThroughputWebSocketIT   : Starting ThroughputWebSocketIT using Java 25 with PID 53869 (started by benferenchak in /Users/benferenchak/IdeaProjects/ramsey/ramsey-ui/ramsey-ui-rest)
+2026-06-20T11:30:51.402-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] c.s.r.ui.sampler.ThroughputWebSocketIT   : No active profile set, falling back to 1 default profile: "default"
+2026-06-20T11:30:51.537-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Multiple Spring Data modules found, entering strict repository configuration mode
+2026-06-20T11:30:51.537-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data Redis repositories in DEFAULT mode.
+2026-06-20T11:30:51.541-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 2 ms. Found 0 Redis repository interfaces.
+2026-06-20T11:30:51.638-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
+2026-06-20T11:30:51.638-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-06-20T11:30:51.638-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.22]
+2026-06-20T11:30:51.643-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 240 ms
+2026-06-20T11:30:51.814-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.b.w.a.WelcomePageHandlerMapping      : Adding welcome page: class path resource [META-INF/resources/index.html]
+2026-06-20T11:30:51.862-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 2 endpoints beneath base path '/actuator'
+2026-06-20T11:30:51.879-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Starting...
+2026-06-20T11:30:51.880-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : BrokerAvailabilityEvent[available=true, SimpleBrokerMessageHandler [org.springframework.messaging.simp.broker.DefaultSubscriptionRegistry@4ff1b0d]]
+2026-06-20T11:30:51.880-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.m.s.b.SimpleBrokerMessageHandler     : Started.
+2026-06-20T11:30:51.883-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 63089 (http) with context path '/'
+2026-06-20T11:30:51.895-04:00  INFO 53869 --- [ramsey-ui-rest] [           main] c.s.r.ui.sampler.ThroughputWebSocketIT   : Started ThroughputWebSocketIT in 0.542 seconds (process running for 5.379)
+2026-06-20T11:30:51.979-04:00  INFO 53869 --- [ramsey-ui-rest] [o-auto-2-exec-1] o.a.c.c.C.[Tomcat-1].[localhost].[/]     : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-06-20T11:30:51.980-04:00  INFO 53869 --- [ramsey-ui-rest] [o-auto-2-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-06-20T11:30:51.981-04:00  INFO 53869 --- [ramsey-ui-rest] [o-auto-2-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
 ]]></system-out>
-    <system-err><![CDATA[Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
-WARNING: A Java agent has been loaded dynamically (/Users/benferenchak/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.10/byte-buddy-agent-1.18.10.jar)
-WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
-WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
-WARNING: Dynamic loading of agents will be disallowed by default in a future release
-]]></system-err>
   </testcase>
-  <testcase name="health_is_up" classname="com.setminusx.ramsey.ui.SpaServingTest" time="0.059"/>
 </testsuite>

@@ -10,6 +10,7 @@ com/setminusx/ramsey/ui/sampler/ThroughputBuffer.class
 com/setminusx/ramsey/ui/sampler/ThroughputSampler$Baseline.class
 com/setminusx/ramsey/ui/model/ProgressionPointDto.class
 com/setminusx/ramsey/ui/client/MwClient$2.class
+com/setminusx/ramsey/ui/web/DashboardController.class
 com/setminusx/ramsey/ui/sampler/ThroughputSampler.class
 com/setminusx/ramsey/ui/redis/StageKeys.class
 com/setminusx/ramsey/ui/client/MwClient.class

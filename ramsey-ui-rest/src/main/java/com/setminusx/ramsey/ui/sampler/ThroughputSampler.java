@@ -2,6 +2,8 @@ package com.setminusx.ramsey.ui.sampler;
 
 import com.setminusx.ramsey.ui.model.ThroughputSample;
 import com.setminusx.ramsey.ui.redis.StageCounterReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -9,6 +11,8 @@ import java.time.Clock;
 
 @Component
 public class ThroughputSampler {
+
+    private static final Logger log = LoggerFactory.getLogger(ThroughputSampler.class);
 
     private record Baseline(Integer stageId, long count, long ts) {}
 
@@ -31,6 +35,16 @@ public class ThroughputSampler {
 
     @Scheduled(fixedRateString = "${ramsey.sampler.interval-ms}")
     public void sample() {
+        try {
+            doSample();
+        } catch (Exception e) {
+            // Transient dependency failure (e.g., Redis blip). Skip this tick and keep the
+            // baseline so the next successful read averages throughput across the gap.
+            log.debug("throughput sample skipped: {}", e.toString());
+        }
+    }
+
+    private void doSample() {
         long now = clock.millis();
         Integer stageId = resolver.resolveActiveStageId();
 
