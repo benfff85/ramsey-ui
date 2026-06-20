@@ -15,9 +15,9 @@ dashboard ships as a single container on port **36003**.
 
     mvn clean package
     java -jar ramsey-ui-rest/target/ramsey-ui-rest-0.1.0.jar
-    # open http://localhost:8080
+    # open http://localhost:8501
 
-Frontend dev server (hot reload; proxies `/api` and `/ws` to the backend on :8080):
+Frontend dev server (hot reload; proxies `/api` and `/ws` to the backend on :8501):
 
     cd ramsey-ui-web && npm install && npm run dev
 
@@ -37,4 +37,5 @@ Run the tests:
 
     docker build -t benferenchak/ramsey-ui:develop .
 
-The container listens on port `8080`; the compose stack maps host `36003:8080`.
+The container listens on port `8501`; the compose stack maps host `36003:8501` (unchanged
+from the previous Streamlit service — same external port and container port).

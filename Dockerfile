@@ -17,5 +17,5 @@ WORKDIR /app
 COPY --from=build /build/ramsey-ui-rest/target/ramsey-ui-rest-0.1.0.jar app.jar
 RUN groupadd -r appgroup && useradd -r -g appgroup -m -d /home/appuser appuser
 USER appuser
-EXPOSE 8080
+EXPOSE 8501
 ENTRYPOINT ["java", "-jar", "/app/app.jar"]

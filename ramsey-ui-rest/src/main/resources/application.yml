@@ -1,5 +1,5 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8501}   # 8501 = drop-in replacement for the old Streamlit container port
 spring:
   application:
     name: ramsey-ui-rest
