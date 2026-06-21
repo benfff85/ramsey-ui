@@ -3,13 +3,18 @@ import { sortCampaigns } from './StatCards';
 
 export type Interval = 1 | 5 | 30;
 
-export function Sidebar({ campaigns, selectedId, onSelect, interval, onIntervalChange, lastUpdated, connected }: {
+export function Sidebar({ campaigns, selectedId, onSelect, interval, onIntervalChange, lastUpdated, connected, collapsed, onToggleCollapse }: {
   campaigns: CampaignDto[]; selectedId: number | null; onSelect: (id: number) => void;
   interval: Interval; onIntervalChange: (i: Interval) => void; lastUpdated: string; connected: boolean;
+  collapsed: boolean; onToggleCollapse: () => void;
 }) {
   const sorted = sortCampaigns(campaigns);
   return (
     <aside className="sidebar">
+      <button className="sidebar__toggle" onClick={onToggleCollapse}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'} aria-expanded={!collapsed}>
+        {collapsed ? '»' : '«'}
+      </button>
       <div className="sidebar__brand">
         <div className="sidebar__mark">RAM<span>SEY</span></div>
         <div className="sidebar__sub">search telemetry</div>

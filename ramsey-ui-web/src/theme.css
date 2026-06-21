@@ -67,6 +67,27 @@ body {
   color: var(--faint);
 }
 
+.sidebar__toggle {
+  position: absolute;
+  top: 16px;
+  right: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: var(--panel-2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: color 120ms ease, border-color 120ms ease;
+}
+.sidebar__toggle:hover { color: var(--text); border-color: var(--accent); }
+.sidebar__toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
 .field { display: flex; flex-direction: column; gap: 8px; }
 .field__label {
   font-family: var(--font-mono);
@@ -262,6 +283,16 @@ td.num, th.num { font-family: var(--font-mono); }
   .app { grid-template-columns: 1fr; }
   .sidebar { position: static; height: auto; flex-direction: row; flex-wrap: wrap; align-items: center; gap: 16px; }
   .rail-spacer { margin: 0; }
+  .sidebar__toggle { display: none; } /* portrait phone: sidebar stays as-is, no collapse */
+}
+
+/* Collapsible left sidebar in the two-column (desktop / landscape phone) layout, so the
+   graphs can take ~full width. Has no effect in the stacked <=760px portrait layout. */
+@media (min-width: 761px) {
+  .app.is-collapsed { grid-template-columns: 46px 1fr; }
+  .app.is-collapsed .sidebar { padding: 14px 0; align-items: center; }
+  .app.is-collapsed .sidebar > *:not(.sidebar__toggle) { display: none; }
+  .app.is-collapsed .sidebar__toggle { position: static; margin: 0 auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
