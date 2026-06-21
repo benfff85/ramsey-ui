@@ -1,6 +1,6 @@
 package com.setminusx.ramsey.ui.sampler;
 
-import com.setminusx.ramsey.ui.model.ThroughputSample;
+import com.setminusx.ramsey.ui.model.LiveTick;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,28 +26,30 @@ class ThroughputWebSocketIT {
     @Autowired ThroughputBroadcaster broadcaster;
 
     @Test
-    void client_receives_broadcast_sample() throws Exception {
+    void client_receives_broadcast_tick() throws Exception {
         WebSocketStompClient stomp = new WebSocketStompClient(new StandardWebSocketClient());
         stomp.setMessageConverter(new JacksonJsonMessageConverter());
 
-        CompletableFuture<ThroughputSample> received = new CompletableFuture<>();
+        CompletableFuture<LiveTick> received = new CompletableFuture<>();
         StompSession session = stomp.connectAsync("ws://localhost:" + port + "/ws",
                 new StompSessionHandlerAdapter() {}).get(5, TimeUnit.SECONDS);
 
         session.subscribe("/topic/throughput", new StompFrameHandler() {
-            @Override public Type getPayloadType(StompHeaders headers) { return ThroughputSample.class; }
+            @Override public Type getPayloadType(StompHeaders headers) { return LiveTick.class; }
             @Override public void handleFrame(StompHeaders headers, Object payload) {
-                ThroughputSample s = (ThroughputSample) payload;
-                // Ignore any incidental sampler ticks; complete only on our explicit sample.
-                if (s.stageId() != null && s.stageId() == 42) received.complete(s);
+                LiveTick t = (LiveTick) payload;
+                // Ignore any incidental sampler ticks; complete only on our explicit one.
+                if (t.stageId() != null && t.stageId() == 42) received.complete(t);
             }
         });
 
         Thread.sleep(200); // allow subscription to register
-        broadcaster.broadcast(new ThroughputSample(123L, 42, 999.0));
+        broadcaster.broadcast(new LiveTick(123L, 42, 999.0, 1500, 300, 600, 50.0, 775623L));
 
-        ThroughputSample got = received.get(5, TimeUnit.SECONDS);
+        LiveTick got = received.get(5, TimeUnit.SECONDS);
         assertThat(got.stageId()).isEqualTo(42);
         assertThat(got.unitsPerSec()).isEqualTo(999.0);
+        assertThat(got.progressPct()).isEqualTo(50.0);
+        assertThat(got.cliqueCount()).isEqualTo(775623L);
     }
 }

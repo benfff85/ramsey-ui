@@ -8,15 +8,18 @@ import { ImprovementChart } from './components/ImprovementChart';
 import { BestResultsTable } from './components/BestResultsTable';
 import { RawDataTable } from './components/RawDataTable';
 import { useThroughputSocket } from './useThroughputSocket';
-import type { CampaignDto, ProgressionPointDto, LiveStageDto } from './types';
+import type { CampaignDto, ProgressionPointDto, BestResultDto } from './types';
 
 export default function App() {
   const [campaigns, setCampaigns] = useState<CampaignDto[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [progression, setProgression] = useState<ProgressionPointDto[]>([]);
-  const [liveStage, setLiveStage] = useState<LiveStageDto | null>(null);
+  const [bestResults, setBestResults] = useState<BestResultDto[]>([]);
   const [interval, setIntervalSec] = useState<Interval>(5);
-  const { samples, connected } = useThroughputSocket();
+  const { samples, latest, connected } = useThroughputSocket();
+
+  // The active stage reported by the live socket — drives transitions, not a stale fetch.
+  const liveStageId = latest?.stageId ?? null;
 
   useEffect(() => {
     api.getCampaigns().then((cs) => {
@@ -26,30 +29,33 @@ export default function App() {
     }).catch(() => undefined);
   }, []);
 
+  // (Re)fetch progression on campaign change AND whenever the live stage advances, so the
+  // charts/raw data pick up new stages without a manual reload.
   useEffect(() => {
     if (selectedId == null) return;
     api.getProgression(selectedId).then(setProgression).catch(() => undefined);
-  }, [selectedId]);
+  }, [selectedId, liveStageId]);
 
-  const sortedProg = [...progression].sort((a, b) => a.stageId - b.stageId);
-  const activeStage = progression.find((p) => p.status === 'ACTIVE') ?? null;
-
+  // Best-results for the live stage; polled and re-keyed when the stage changes.
   useEffect(() => {
-    if (!activeStage) { setLiveStage(null); return; }
+    if (liveStageId == null) { setBestResults([]); return; }
     let alive = true;
-    const tick = () => api.getLiveStage(activeStage.stageId).then((d) => { if (alive) setLiveStage(d); }).catch(() => undefined);
+    const tick = () => api.getLiveStage(liveStageId).then((d) => { if (alive) setBestResults(d.bestResults); }).catch(() => undefined);
     tick();
     const h = setInterval(tick, 5000);
     return () => { alive = false; clearInterval(h); };
-  }, [activeStage?.stageId]);
+  }, [liveStageId]);
 
-  // Smooth the headline stat over the last few samples so a single transient 0 at the
-  // live tail doesn't flicker the card to zero while work is clearly flowing.
-  const recentUps = samples.length
-    ? samples.slice(-5).reduce((a, s) => a + s.unitsPerSec, 0) / Math.min(5, samples.length)
-    : 0;
-  const current = sortedProg[sortedProg.length - 1];
-  const first = sortedProg[0];
+  const sortedProg = [...progression].sort((a, b) => a.stageId - b.stageId);
+  const fallbackCurrent = sortedProg[sortedProg.length - 1];
+  const firstCliqueCount = sortedProg.length ? sortedProg[0].cliqueCount : null;
+
+  // Live scalars come from the socket; fall back to progression before the first tick arrives.
+  const stageId = latest?.stageId ?? fallbackCurrent?.stageId ?? null;
+  const cliqueCount = latest?.cliqueCount ?? fallbackCurrent?.cliqueCount ?? null;
+  const progressPct = latest?.progressPct ?? null;
+  const workIndex = latest?.workIndex ?? 0;
+  const totalPairs = latest?.totalPairs ?? 0;
 
   return (
     <div className="app">
@@ -57,9 +63,8 @@ export default function App() {
                interval={interval} onIntervalChange={setIntervalSec}
                lastUpdated={new Date().toLocaleTimeString()} connected={connected} />
       <main className="main">
-        {current && first && (
-          <StatCards current={current} first={first} liveStage={liveStage} unitsPerSec={recentUps} />
-        )}
+        <StatCards stageId={stageId} cliqueCount={cliqueCount} firstCliqueCount={firstCliqueCount}
+                   progressPct={progressPct} workIndex={workIndex} totalPairs={totalPairs} />
         <ThroughputChart samples={samples} interval={interval} />
         {progression.length > 0 && (
           <>
@@ -67,7 +72,7 @@ export default function App() {
               <CliqueProgressionChart progression={progression} />
               <ImprovementChart progression={progression} />
             </div>
-            <BestResultsTable liveStage={liveStage} currentClique={current?.cliqueCount ?? 0} />
+            <BestResultsTable bestResults={bestResults} currentClique={cliqueCount ?? 0} />
             <RawDataTable progression={progression} />
           </>
         )}

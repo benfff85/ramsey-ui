@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Set;
 
 @Service
-public class RedisLiveStageService implements StageCounterReader {
+public class RedisLiveStageService {
 
     private final StringRedisTemplate redis;
     private final ObjectMapper objectMapper;
@@ -21,11 +21,6 @@ public class RedisLiveStageService implements StageCounterReader {
     public RedisLiveStageService(StringRedisTemplate redis, ObjectMapper objectMapper) {
         this.redis = redis;
         this.objectMapper = objectMapper;
-    }
-
-    @Override
-    public long readProcessedCount(int stageId) {
-        return getProcessedCount(stageId);
     }
 
     public long getProcessedCount(int stageId) {
