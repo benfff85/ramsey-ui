@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
-import type { ThroughputSample } from './types';
+import type { ThroughputSample, LiveTick } from './types';
 import { api } from './api';
 import { mergeSample } from './throughput';
 
@@ -8,6 +8,7 @@ const MAX_POINTS = 7200;
 
 export function useThroughputSocket() {
   const [samples, setSamples] = useState<ThroughputSample[]>([]);
+  const [latest, setLatest] = useState<LiveTick | null>(null);
   const [connected, setConnected] = useState(false);
   const clientRef = useRef<Client | null>(null);
 
@@ -19,8 +20,10 @@ export function useThroughputSocket() {
       setConnected(true);
       api.getThroughputHistory(MAX_POINTS).then(setSamples).catch(() => undefined);
       client.subscribe('/topic/throughput', (msg) => {
-        const sample = JSON.parse(msg.body) as ThroughputSample;
-        setSamples((prev) => mergeSample(prev, sample, MAX_POINTS));
+        const tick = JSON.parse(msg.body) as LiveTick;
+        setLatest(tick);
+        setSamples((prev) =>
+          mergeSample(prev, { ts: tick.ts, stageId: tick.stageId, unitsPerSec: tick.unitsPerSec }, MAX_POINTS));
       });
     };
     client.onWebSocketClose = () => setConnected(false);
@@ -30,5 +33,5 @@ export function useThroughputSocket() {
     return () => { void client.deactivate(); };
   }, []);
 
-  return { samples, connected };
+  return { samples, latest, connected };
 }

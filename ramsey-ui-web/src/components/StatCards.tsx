@@ -1,4 +1,4 @@
-import type { CampaignDto, ProgressionPointDto, LiveStageDto } from '../types';
+import type { CampaignDto } from '../types';
 
 export function sortCampaigns(campaigns: CampaignDto[]): CampaignDto[] {
   const ts = (c: CampaignDto) => (c.updatedDate ? Date.parse(c.updatedDate) : 0);
@@ -25,22 +25,21 @@ function Stat({ label, value, unit, sub, subClass, primary }: {
   );
 }
 
-export function StatCards({ current, first, liveStage }: {
-  current: ProgressionPointDto; first: ProgressionPointDto; liveStage: LiveStageDto | null;
+export function StatCards({ stageId, cliqueCount, firstCliqueCount, progressPct, workIndex, totalPairs }: {
+  stageId: number | null; cliqueCount: number | null; firstCliqueCount: number | null;
+  progressPct: number | null; workIndex: number; totalPairs: number;
 }) {
   // positive improvement = clique count dropped from the start of the campaign
-  const improvement = first.cliqueCount - current.cliqueCount;
+  const improvement = (firstCliqueCount != null && cliqueCount != null) ? firstCliqueCount - cliqueCount : null;
   return (
     <div className="statcards">
-      <Stat label="Active Stage" value={`#${current.stageId}`} primary />
-      <Stat label="Clique Count" value={fmt(current.cliqueCount)}
-            sub={`${improvement >= 0 ? '−' : '+'}${fmt(Math.abs(improvement))} from start`}
-            subClass={improvement >= 0 ? 'stat__sub--up' : 'stat__sub--down'} />
-      <Stat label="Total Improvement" value={fmt(improvement)} />
-      <Stat label="Progress" value={liveStage ? `${liveStage.progressPct.toFixed(1)}%` : '—'}
-            sub={liveStage
-              ? `${fmt(Math.min(liveStage.workIndex, liveStage.totalPairs))} / ${fmt(liveStage.totalPairs)}`
-              : undefined} />
+      <Stat label="Active Stage" value={stageId != null ? `#${stageId}` : '—'} primary />
+      <Stat label="Clique Count" value={cliqueCount != null ? fmt(cliqueCount) : '—'}
+            sub={improvement != null ? `${improvement >= 0 ? '−' : '+'}${fmt(Math.abs(improvement))} from start` : undefined}
+            subClass={improvement != null ? (improvement >= 0 ? 'stat__sub--up' : 'stat__sub--down') : undefined} />
+      <Stat label="Total Improvement" value={improvement != null ? fmt(improvement) : '—'} />
+      <Stat label="Progress" value={progressPct != null ? `${progressPct.toFixed(1)}%` : '—'}
+            sub={totalPairs > 0 ? `${fmt(Math.min(workIndex, totalPairs))} / ${fmt(totalPairs)}` : undefined} />
     </div>
   );
 }

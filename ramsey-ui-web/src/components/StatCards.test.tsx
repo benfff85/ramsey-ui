@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { StatCards, sortCampaigns } from './StatCards';
-import type { CampaignDto, ProgressionPointDto, LiveStageDto } from '../types';
+import type { CampaignDto } from '../types';
 
 const camp = (id: number, status: string, updated: string): CampaignDto => ({
   campaignId: id, subgraphSize: 8, vertexCount: 281, totalPairs: 600,
@@ -20,12 +20,18 @@ describe('sortCampaigns', () => {
 });
 
 describe('StatCards', () => {
-  it('renders clique count and progress', () => {
-    const first: ProgressionPointDto = { stageId: 1, graphId: 1, cliqueCount: 800000, status: 'COMPLETE', createdDate: null };
-    const current: ProgressionPointDto = { stageId: 42, graphId: 2, cliqueCount: 775623, status: 'ACTIVE', createdDate: null };
-    const live: LiveStageDto = { stageId: 42, processedCount: 1500, workIndex: 300, totalPairs: 600, progressPct: 50, bestResults: [] };
-    render(<StatCards current={current} first={first} liveStage={live} />);
+  it('renders live stage, clique count and progress', () => {
+    render(<StatCards stageId={42} cliqueCount={775623} firstCliqueCount={800000}
+                      progressPct={50} workIndex={300} totalPairs={600} />);
+    expect(screen.getByText('#42')).toBeInTheDocument();
     expect(screen.getByText('775,623')).toBeInTheDocument();
     expect(screen.getByText('50.0%')).toBeInTheDocument();
+    expect(screen.getByText('24,377')).toBeInTheDocument(); // total improvement = 800000 - 775623
+  });
+
+  it('shows placeholders before any data', () => {
+    render(<StatCards stageId={null} cliqueCount={null} firstCliqueCount={null}
+                      progressPct={null} workIndex={0} totalPairs={0} />);
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0);
   });
 });

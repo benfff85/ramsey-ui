@@ -18,55 +18,54 @@ class ActiveStageResolverTest {
     private CampaignDto campaign(int id, String status) {
         return new CampaignDto(id, 8, 281, 600L, "S", status, "2026-06-14T10:00:00", "2026-06-16T12:00:00");
     }
-    private ProgressionPointDto stage(int id, String status) {
-        return new ProgressionPointDto(id, 1, 100L, status, "2026-06-16T12:00:00");
+    private ProgressionPointDto stage(int id, long clique, String status) {
+        return new ProgressionPointDto(id, 1, clique, status, "2026-06-16T12:00:00");
     }
 
     @Test
-    void resolves_active_stage_of_active_campaign() {
+    void resolves_active_stage_with_clique_count() {
         MwClient mw = mock(MwClient.class);
         when(mw.getCampaigns()).thenReturn(List.of(campaign(1, "INACTIVE"), campaign(10, "ACTIVE")));
-        when(mw.getProgression(10)).thenReturn(List.of(stage(40, "COMPLETE"), stage(42, "ACTIVE")));
+        when(mw.getProgression(10)).thenReturn(List.of(stage(40, 999L, "COMPLETE"), stage(42, 775623L, "ACTIVE")));
 
-        ActiveStageResolver resolver = new ActiveStageResolver(mw, Clock.systemUTC());
-        assertThat(resolver.resolveActiveStageId()).isEqualTo(42);
+        ActiveStage active = new ActiveStageResolver(mw, Clock.systemUTC()).resolveActiveStage();
+        assertThat(active).isNotNull();
+        assertThat(active.stageId()).isEqualTo(42);
+        assertThat(active.cliqueCount()).isEqualTo(775623L);
     }
 
     @Test
     void returns_null_when_no_active_campaign() {
         MwClient mw = mock(MwClient.class);
         when(mw.getCampaigns()).thenReturn(List.of(campaign(1, "INACTIVE")));
-        ActiveStageResolver resolver = new ActiveStageResolver(mw, Clock.systemUTC());
-        assertThat(resolver.resolveActiveStageId()).isNull();
+        assertThat(new ActiveStageResolver(mw, Clock.systemUTC()).resolveActiveStage()).isNull();
     }
 
     @Test
     void returns_null_when_mw_unreachable() {
         MwClient mw = mock(MwClient.class);
         when(mw.getCampaigns()).thenThrow(new RuntimeException("connection refused"));
-        ActiveStageResolver resolver = new ActiveStageResolver(mw, Clock.systemUTC());
-        assertThat(resolver.resolveActiveStageId()).isNull();
+        assertThat(new ActiveStageResolver(mw, Clock.systemUTC()).resolveActiveStage()).isNull();
     }
 
     @Test
     void caches_within_window_then_refreshes() {
         MwClient mw = mock(MwClient.class);
         when(mw.getCampaigns()).thenReturn(List.of(campaign(10, "ACTIVE")));
-        when(mw.getProgression(10)).thenReturn(List.of(stage(42, "ACTIVE")));
+        when(mw.getProgression(10)).thenReturn(List.of(stage(42, 775623L, "ACTIVE")));
 
         MutableClock clock = new MutableClock(Instant.parse("2026-06-20T00:00:00Z"));
         ActiveStageResolver resolver = new ActiveStageResolver(mw, clock);
 
-        resolver.resolveActiveStageId();
-        resolver.resolveActiveStageId();
+        resolver.resolveActiveStage();
+        resolver.resolveActiveStage();
         verify(mw, times(1)).getCampaigns(); // cached, only one call
 
         clock.advanceSeconds(6);
-        resolver.resolveActiveStageId();
+        resolver.resolveActiveStage();
         verify(mw, times(2)).getCampaigns(); // cache expired, refreshed
     }
 
-    // Minimal adjustable clock for cache tests.
     static class MutableClock extends Clock {
         private Instant now;
         MutableClock(Instant start) { this.now = start; }

@@ -1,11 +1,11 @@
 package com.setminusx.ramsey.ui.sampler;
 
-import com.setminusx.ramsey.ui.model.ThroughputSample;
+import com.setminusx.ramsey.ui.model.LiveTick;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
 public interface ThroughputBroadcaster {
-    void broadcast(ThroughputSample sample);
+    void broadcast(LiveTick tick);
 
     @Component
     class StompThroughputBroadcaster implements ThroughputBroadcaster {
@@ -14,8 +14,8 @@ public interface ThroughputBroadcaster {
         public StompThroughputBroadcaster(SimpMessagingTemplate messaging) {
             this.messaging = messaging;
         }
-        @Override public void broadcast(ThroughputSample sample) {
-            messaging.convertAndSend(TOPIC, sample);
+        @Override public void broadcast(LiveTick tick) {
+            messaging.convertAndSend(TOPIC, tick);
         }
     }
 }

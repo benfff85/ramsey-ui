@@ -2,11 +2,9 @@ package com.setminusx.ramsey.ui.sampler;
 
 import com.setminusx.ramsey.ui.client.MwClient;
 import com.setminusx.ramsey.ui.model.CampaignDto;
-import com.setminusx.ramsey.ui.model.ProgressionPointDto;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
-import java.util.List;
 
 @Component
 public class ActiveStageResolver {
@@ -16,41 +14,40 @@ public class ActiveStageResolver {
     private final MwClient mw;
     private final Clock clock;
 
-    private Integer cachedStageId;
+    private ActiveStage cached;
     private long cachedAtMillis;
-    private boolean cached;
+    private boolean haveCached; // first call always computes (avoids a sentinel-overflow guard)
 
     public ActiveStageResolver(MwClient mw, Clock clock) {
         this.mw = mw;
         this.clock = clock;
     }
 
-    public synchronized Integer resolveActiveStageId() {
+    public synchronized ActiveStage resolveActiveStage() {
         long now = clock.millis();
-        if (cached && now - cachedAtMillis < CACHE_MILLIS) {
-            return cachedStageId;
+        if (haveCached && now - cachedAtMillis < CACHE_MILLIS) {
+            return cached;
         }
         try {
-            cachedStageId = computeActiveStageId();
+            cached = computeActiveStage();
         } catch (Exception e) {
-            cachedStageId = null; // mw unreachable -> no active stage; sampler emits 0
+            cached = null; // mw unreachable -> no active stage; sampler emits an empty tick
         }
         cachedAtMillis = now;
-        cached = true;
-        return cachedStageId;
+        haveCached = true;
+        return cached;
     }
 
-    private Integer computeActiveStageId() {
+    private ActiveStage computeActiveStage() {
         CampaignDto active = mw.getCampaigns().stream()
                 .filter(c -> "ACTIVE".equalsIgnoreCase(c.status()))
                 .findFirst()
                 .orElse(null);
         if (active == null) return null;
 
-        List<ProgressionPointDto> prog = mw.getProgression(active.campaignId());
-        return prog.stream()
+        return mw.getProgression(active.campaignId()).stream()
                 .filter(p -> "ACTIVE".equalsIgnoreCase(p.status()))
-                .map(ProgressionPointDto::stageId)
+                .map(p -> new ActiveStage(p.stageId(), p.cliqueCount()))
                 .findFirst()
                 .orElse(null);
     }
