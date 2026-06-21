@@ -16,6 +16,7 @@ export default function App() {
   const [progression, setProgression] = useState<ProgressionPointDto[]>([]);
   const [bestResults, setBestResults] = useState<BestResultDto[]>([]);
   const [interval, setIntervalSec] = useState<Interval>(5);
+  const [collapsed, setCollapsed] = useState(false);
   const { samples, latest, connected } = useThroughputSocket();
 
   // The active stage reported by the live socket — drives transitions, not a stale fetch.
@@ -58,10 +59,11 @@ export default function App() {
   const totalPairs = latest?.totalPairs ?? 0;
 
   return (
-    <div className="app">
+    <div className={`app${collapsed ? ' is-collapsed' : ''}`}>
       <Sidebar campaigns={campaigns} selectedId={selectedId} onSelect={setSelectedId}
                interval={interval} onIntervalChange={setIntervalSec}
-               lastUpdated={new Date().toLocaleTimeString()} connected={connected} />
+               lastUpdated={new Date().toLocaleTimeString()} connected={connected}
+               collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)} />
       <main className="main">
         <StatCards stageId={stageId} cliqueCount={cliqueCount} firstCliqueCount={firstCliqueCount}
                    progressPct={progressPct} workIndex={workIndex} totalPairs={totalPairs} />
