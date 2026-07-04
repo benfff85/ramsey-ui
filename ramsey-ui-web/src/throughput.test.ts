@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { bucketSamples, mergeSample } from './throughput';
 import type { ThroughputSample } from './types';
 
-const s = (ts: number, ups: number): ThroughputSample => ({ ts, stageId: 1, unitsPerSec: ups });
+const s = (ts: number, ups: number): ThroughputSample => ({ ts, campaignId: 1, stageId: 1, unitsPerSec: ups });
 
 describe('bucketSamples', () => {
   it('passes 1s through unchanged', () => {

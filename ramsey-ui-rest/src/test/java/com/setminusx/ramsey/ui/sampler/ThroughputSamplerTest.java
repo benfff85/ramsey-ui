@@ -9,6 +9,7 @@ import org.mockito.ArgumentCaptor;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -38,11 +39,18 @@ class ThroughputSamplerTest {
         return cap.getValue();
     }
 
+    private List<LiveTick> allBroadcasts() {
+        ArgumentCaptor<LiveTick> cap = ArgumentCaptor.forClass(LiveTick.class);
+        verify(broadcaster, atLeastOnce()).broadcast(cap.capture());
+        return cap.getAllValues();
+    }
+
     @Test
     void emits_empty_tick_when_no_active_stage() {
-        when(resolver.resolveActiveStage()).thenReturn(null);
+        when(resolver.resolveActiveStages()).thenReturn(List.of());
         sampler.sample();
         LiveTick t = lastBroadcast();
+        assertThat(t.campaignId()).isNull();
         assertThat(t.stageId()).isNull();
         assertThat(t.unitsPerSec()).isZero();
         assertThat(t.progressPct()).isZero();
@@ -50,7 +58,7 @@ class ThroughputSamplerTest {
 
     @Test
     void first_sample_baselines_then_computes_rate_and_progress() {
-        when(resolver.resolveActiveStage()).thenReturn(new ActiveStage(42, 775623L));
+        when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(2, 42, 775623L)));
         when(redis.getWorkIndex(42)).thenReturn(300L);
         when(redis.getTotalPairs(42)).thenReturn(600L);
 
@@ -64,6 +72,7 @@ class ThroughputSamplerTest {
         assertThat(buffer.snapshot()).extracting(ThroughputSample::unitsPerSec)
                 .containsExactly(0.0, 100.0);
         LiveTick t = lastBroadcast();
+        assertThat(t.campaignId()).isEqualTo(2);
         assertThat(t.stageId()).isEqualTo(42);
         assertThat(t.unitsPerSec()).isEqualTo(100.0);
         assertThat(t.progressPct()).isEqualTo(50.0);
@@ -71,8 +80,68 @@ class ThroughputSamplerTest {
     }
 
     @Test
+    void samples_each_active_campaign_with_independent_baselines() {
+        // the multi-campaign case: local fleet on campaign 12, remote fleet on campaign 10 —
+        // each gets its own tick with its own rate, computed from its own baseline.
+        when(resolver.resolveActiveStages()).thenReturn(List.of(
+                new ActiveStage(10, 100, 26031L), new ActiveStage(12, 200, 27668L)));
+        when(redis.getProcessedCount(100)).thenReturn(1_000L);
+        when(redis.getProcessedCount(200)).thenReturn(50_000L);
+        sampler.sample(); // baseline both
+
+        clock.advanceMillis(1000);
+        when(redis.getProcessedCount(100)).thenReturn(1_250L);   // +250/s (remote)
+        when(redis.getProcessedCount(200)).thenReturn(650_000L); // +600K/s (local)
+        sampler.sample();
+
+        assertThat(buffer.snapshot()).extracting(ThroughputSample::campaignId, ThroughputSample::unitsPerSec)
+                .containsExactly(
+                        tuple(10, 0.0), tuple(12, 0.0),
+                        tuple(10, 250.0), tuple(12, 600_000.0));
+        List<LiveTick> ticks = allBroadcasts();
+        assertThat(ticks).hasSize(4);
+        assertThat(ticks.get(2).campaignId()).isEqualTo(10);
+        assertThat(ticks.get(2).unitsPerSec()).isEqualTo(250.0);
+        assertThat(ticks.get(3).campaignId()).isEqualTo(12);
+        assertThat(ticks.get(3).unitsPerSec()).isEqualTo(600_000.0);
+    }
+
+    @Test
+    void drops_baseline_when_campaign_goes_inactive_and_rebaselines_on_return() {
+        when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(11, 42, 1L)));
+        when(redis.getProcessedCount(42)).thenReturn(1000L);
+        sampler.sample(); // baseline campaign 11
+
+        clock.advanceMillis(1000);
+        when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(12, 50, 2L)));
+        when(redis.getProcessedCount(50)).thenReturn(10L);
+        sampler.sample(); // campaign 11 banked; 12 baselines at 0
+
+        clock.advanceMillis(1000);
+        when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(11, 42, 1L)));
+        when(redis.getProcessedCount(42)).thenReturn(9_999_999L);
+        sampler.sample(); // 11 returns: stale baseline must be gone -> 0, not a huge spike
+
+        assertThat(buffer.snapshot()).extracting(ThroughputSample::unitsPerSec)
+                .containsExactly(0.0, 0.0, 0.0);
+    }
+
+    @Test
+    void one_campaigns_redis_failure_does_not_starve_the_other() {
+        when(resolver.resolveActiveStages()).thenReturn(List.of(
+                new ActiveStage(10, 100, 1L), new ActiveStage(12, 200, 2L)));
+        when(redis.getProcessedCount(100)).thenThrow(new RuntimeException("redis down"));
+        when(redis.getProcessedCount(200)).thenReturn(500L);
+
+        sampler.sample(); // must not throw; campaign 12 still emits
+
+        assertThat(buffer.snapshot()).extracting(ThroughputSample::campaignId)
+                .containsExactly(12);
+    }
+
+    @Test
     void clamps_negative_rate_on_counter_reset() {
-        when(resolver.resolveActiveStage()).thenReturn(new ActiveStage(42, 1L));
+        when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(2, 42, 1L)));
         when(redis.getProcessedCount(42)).thenReturn(5000L);
         sampler.sample();
         clock.advanceMillis(1000);
@@ -84,12 +153,12 @@ class ThroughputSamplerTest {
 
     @Test
     void rebaselines_without_spike_on_stage_change() {
-        when(resolver.resolveActiveStage()).thenReturn(new ActiveStage(42, 1L));
+        when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(2, 42, 1L)));
         when(redis.getProcessedCount(42)).thenReturn(1000L);
         sampler.sample(); // baseline stage 42
 
         clock.advanceMillis(1000);
-        when(resolver.resolveActiveStage()).thenReturn(new ActiveStage(43, 1L)); // new stage
+        when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(2, 43, 1L))); // new stage
         when(redis.getProcessedCount(43)).thenReturn(50L);
         sampler.sample(); // re-baseline, expect 0 (no negative spike 1000->50)
 
@@ -100,10 +169,14 @@ class ThroughputSamplerTest {
 
     @Test
     void skips_tick_without_emitting_when_redis_read_fails() {
-        when(resolver.resolveActiveStage()).thenReturn(new ActiveStage(42, 1L));
+        when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(2, 42, 1L)));
         when(redis.getProcessedCount(42)).thenThrow(new RuntimeException("redis down"));
         sampler.sample(); // must not throw
         assertThat(buffer.snapshot()).isEmpty();
         verifyNoInteractions(broadcaster);
+    }
+
+    private static org.assertj.core.groups.Tuple tuple(Object... values) {
+        return org.assertj.core.groups.Tuple.tuple(values);
     }
 }

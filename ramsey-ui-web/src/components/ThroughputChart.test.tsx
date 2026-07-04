@@ -15,7 +15,7 @@ vi.mock('recharts', async (importOriginal) => {
   };
 });
 
-const s = (ts: number, ups: number): ThroughputSample => ({ ts, stageId: 1, unitsPerSec: ups });
+const s = (ts: number, ups: number): ThroughputSample => ({ ts, campaignId: 1, stageId: 1, unitsPerSec: ups });
 
 describe('ThroughputChart', () => {
   it('shows the latest bucketed value as the headline', () => {

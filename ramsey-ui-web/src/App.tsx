@@ -17,9 +17,15 @@ export default function App() {
   const [bestResults, setBestResults] = useState<BestResultDto[]>([]);
   const [interval, setIntervalSec] = useState<Interval>(5);
   const [collapsed, setCollapsed] = useState(false);
-  const { samples, latest, connected } = useThroughputSocket();
+  const { byCampaign, connected } = useThroughputSocket();
 
-  // The active stage reported by the live socket — drives transitions, not a stale fetch.
+  // Live view of the SELECTED campaign only — with several campaigns active, the socket
+  // carries per-campaign ticks and each campaign has its own live state.
+  const live = selectedId != null ? byCampaign[selectedId] : undefined;
+  const latest = live?.latest ?? null;
+  const samples = live?.samples ?? [];
+
+  // The selected campaign's active stage reported by the live socket — drives transitions.
   const liveStageId = latest?.stageId ?? null;
 
   useEffect(() => {
