@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Client } from '@stomp/stompjs';
 import type { ThroughputSample, LiveTick } from './types';
 import { api } from './api';
-import { mergeSample } from './throughput';
+import { mergeHistory, mergeSample } from './throughput';
 
 const MAX_POINTS = 7200;
 // A campaign whose ticks stop arriving (banked/rotated away) goes "not live" after this long.
@@ -31,11 +31,19 @@ export function useThroughputSocket() {
       setConnected(true);
       api.getThroughputHistory(MAX_POINTS).then((history) => {
         setByCampaign((prev) => {
-          const next: Record<number, CampaignLive> = { ...prev };
+          // Live ticks may already have arrived while the fetch was in flight — merge the
+          // (older) history UNDER them, sorted and deduped, so charts stay chronological.
+          const grouped = new Map<number, typeof history>();
           for (const s of history) {
             if (s.campaignId == null) continue;
-            const cur = next[s.campaignId] ?? { samples: [], latest: null };
-            next[s.campaignId] = { ...cur, samples: mergeSample(cur.samples, s, MAX_POINTS) };
+            const arr = grouped.get(s.campaignId) ?? [];
+            arr.push(s);
+            grouped.set(s.campaignId, arr);
+          }
+          const next: Record<number, CampaignLive> = { ...prev };
+          for (const [id, hist] of grouped) {
+            const cur = next[id] ?? { samples: [], latest: null };
+            next[id] = { ...cur, samples: mergeHistory(cur.samples, hist, MAX_POINTS) };
           }
           return next;
         });

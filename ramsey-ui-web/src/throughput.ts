@@ -26,3 +26,18 @@ export function mergeSample(
   const next = [...prev, sample];
   return next.length > maxPoints ? next.slice(next.length - maxPoints) : next;
 }
+
+/**
+ * Merge a history fetch into samples that may already contain newer live ticks (the REST
+ * fetch resolves after the socket subscription starts). Result is ts-sorted, deduped by ts,
+ * and capped to the newest maxPoints — so the chart never sees out-of-order points.
+ */
+export function mergeHistory(
+  existing: ThroughputSample[], history: ThroughputSample[], maxPoints: number,
+): ThroughputSample[] {
+  const seen = new Set<number>();
+  const merged = [...existing, ...history]
+    .sort((a, b) => a.ts - b.ts)
+    .filter((s) => (seen.has(s.ts) ? false : (seen.add(s.ts), true)));
+  return merged.length > maxPoints ? merged.slice(merged.length - maxPoints) : merged;
+}
