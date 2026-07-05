@@ -26,7 +26,7 @@ describe('StatCards', () => {
     expect(screen.getByText('#42')).toBeInTheDocument();
     expect(screen.getAllByText('775,623').length).toBe(2); // current + campaign min
     expect(screen.getByText('50.0%')).toBeInTheDocument();
-    expect(screen.getByText('24,377')).toBeInTheDocument(); // total improvement = 800000 - 775623
+    expect(screen.getByText('−24,377 from start')).toBeInTheDocument(); // deltas sub = 800000 - 775623
   });
 
   it('deltas tile shows "at min" when the live count sits on the campaign floor', () => {

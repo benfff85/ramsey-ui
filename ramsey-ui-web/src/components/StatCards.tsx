@@ -43,7 +43,6 @@ export function StatCards({ stageId, cliqueCount, minCliqueCount, firstCliqueCou
             unit={aboveMin != null && aboveMin !== 0 ? ' vs min' : undefined}
             sub={improvement != null ? `${improvement >= 0 ? '−' : '+'}${fmt(Math.abs(improvement))} from start` : undefined}
             subClass={improvement != null ? (improvement >= 0 ? 'stat__sub--up' : 'stat__sub--down') : undefined} />
-      <Stat label="Total Improvement" value={improvement != null ? fmt(improvement) : '—'} />
       <Stat label="Progress" value={progressPct != null ? `${progressPct.toFixed(1)}%` : '—'}
             sub={totalPairs > 0 ? `${fmt(Math.min(workIndex, totalPairs))} / ${fmt(totalPairs)}` : undefined} />
     </div>
