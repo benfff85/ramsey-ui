@@ -29,17 +29,20 @@ describe('StatCards', () => {
     expect(screen.getByText('24,377')).toBeInTheDocument(); // total improvement = 800000 - 775623
   });
 
-  it('shows the campaign min with "at campaign best" when the live count sits on the floor', () => {
+  it('deltas tile shows "at min" when the live count sits on the campaign floor', () => {
     render(<StatCards stageId={42} cliqueCount={25840} minCliqueCount={25840} firstCliqueCount={27401}
                       progressPct={10} workIndex={1} totalPairs={10} />);
-    expect(screen.getByText('at campaign best')).toBeInTheDocument();
+    expect(screen.getByText('at min')).toBeInTheDocument();
+    expect(screen.getByText('−1,561 from start')).toBeInTheDocument();
   });
 
-  it('shows how far the live count drifted above the campaign min', () => {
+  it('deltas tile shows drift above min and improvement from start together', () => {
     render(<StatCards stageId={42} cliqueCount={26007} minCliqueCount={25881} firstCliqueCount={27104}
                       progressPct={10} workIndex={1} totalPairs={10} />);
-    expect(screen.getByText('25,881')).toBeInTheDocument();
-    expect(screen.getByText('+126 above min')).toBeInTheDocument();
+    expect(screen.getByText('25,881')).toBeInTheDocument(); // campaign min card, no subtext
+    expect(screen.getByText('+126')).toBeInTheDocument();   // deltas tile value
+    expect(screen.getByText('vs min')).toBeInTheDocument();
+    expect(screen.getByText('−1,097 from start')).toBeInTheDocument();
   });
 
   it('shows placeholders before any data', () => {

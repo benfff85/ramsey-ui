@@ -36,12 +36,13 @@ export function StatCards({ stageId, cliqueCount, minCliqueCount, firstCliqueCou
   return (
     <div className="statcards">
       <Stat label="Active Stage" value={stageId != null ? `#${stageId}` : '—'} primary />
-      <Stat label="Clique Count" value={cliqueCount != null ? fmt(cliqueCount) : '—'}
+      <Stat label="Clique Count" value={cliqueCount != null ? fmt(cliqueCount) : '—'} />
+      <Stat label="Campaign Min" value={minCliqueCount != null ? fmt(minCliqueCount) : '—'} />
+      <Stat label="Deltas"
+            value={aboveMin != null ? (aboveMin === 0 ? 'at min' : `+${fmt(aboveMin)}`) : '—'}
+            unit={aboveMin != null && aboveMin !== 0 ? ' vs min' : undefined}
             sub={improvement != null ? `${improvement >= 0 ? '−' : '+'}${fmt(Math.abs(improvement))} from start` : undefined}
             subClass={improvement != null ? (improvement >= 0 ? 'stat__sub--up' : 'stat__sub--down') : undefined} />
-      <Stat label="Campaign Min" value={minCliqueCount != null ? fmt(minCliqueCount) : '—'}
-            sub={aboveMin != null ? (aboveMin === 0 ? 'at campaign best' : `+${fmt(aboveMin)} above min`) : undefined}
-            subClass={aboveMin != null ? (aboveMin === 0 ? 'stat__sub--up' : 'stat__sub--down') : undefined} />
       <Stat label="Total Improvement" value={improvement != null ? fmt(improvement) : '—'} />
       <Stat label="Progress" value={progressPct != null ? `${progressPct.toFixed(1)}%` : '—'}
             sub={totalPairs > 0 ? `${fmt(Math.min(workIndex, totalPairs))} / ${fmt(totalPairs)}` : undefined} />

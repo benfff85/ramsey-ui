@@ -1,0 +1,42 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - button "Collapse sidebar" [expanded] [ref=e5] [cursor=pointer]: «
+    - generic [ref=e6]:
+      - generic [ref=e7]: RAMSEY
+      - generic [ref=e8]: search telemetry
+    - generic [ref=e9]:
+      - generic [ref=e10]: Campaign
+      - combobox "Campaign" [ref=e11] [cursor=pointer]
+    - generic [ref=e12]:
+      - generic [ref=e13]: Live interval
+      - group "Live update interval" [ref=e14]:
+        - button "1s" [ref=e15] [cursor=pointer]
+        - button "5s" [pressed] [ref=e16] [cursor=pointer]
+        - button "30s" [ref=e17] [cursor=pointer]
+    - generic [ref=e18]: Reconnecting…
+    - generic [ref=e20]: synced 9:08:39 AM
+  - main [ref=e21]:
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - generic [ref=e24]: Active Stage
+        - generic [ref=e25]: —
+      - generic [ref=e26]:
+        - generic [ref=e27]: Clique Count
+        - generic [ref=e28]: —
+      - generic [ref=e29]:
+        - generic [ref=e30]: Campaign Min
+        - generic [ref=e31]: —
+      - generic [ref=e32]:
+        - generic [ref=e33]: Total Improvement
+        - generic [ref=e34]: —
+      - generic [ref=e35]:
+        - generic [ref=e36]: Progress
+        - generic [ref=e37]: —
+    - generic [ref=e38]:
+      - generic [ref=e39]:
+        - heading "Work units / sec · 5s buckets" [level=2] [ref=e40]:
+          - text: Work units / sec
+          - generic [ref=e41]: · 5s buckets
+        - generic [ref=e42]: live
+      - generic [ref=e44]: 0u/s
+      - img [ref=e47]
