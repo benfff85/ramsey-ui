@@ -21,16 +21,29 @@ describe('sortCampaigns', () => {
 
 describe('StatCards', () => {
   it('renders live stage, clique count and progress', () => {
-    render(<StatCards stageId={42} cliqueCount={775623} firstCliqueCount={800000}
+    render(<StatCards stageId={42} cliqueCount={775623} minCliqueCount={775623} firstCliqueCount={800000}
                       progressPct={50} workIndex={300} totalPairs={600} />);
     expect(screen.getByText('#42')).toBeInTheDocument();
-    expect(screen.getByText('775,623')).toBeInTheDocument();
+    expect(screen.getAllByText('775,623').length).toBe(2); // current + campaign min
     expect(screen.getByText('50.0%')).toBeInTheDocument();
     expect(screen.getByText('24,377')).toBeInTheDocument(); // total improvement = 800000 - 775623
   });
 
+  it('shows the campaign min with "at campaign best" when the live count sits on the floor', () => {
+    render(<StatCards stageId={42} cliqueCount={25840} minCliqueCount={25840} firstCliqueCount={27401}
+                      progressPct={10} workIndex={1} totalPairs={10} />);
+    expect(screen.getByText('at campaign best')).toBeInTheDocument();
+  });
+
+  it('shows how far the live count drifted above the campaign min', () => {
+    render(<StatCards stageId={42} cliqueCount={26007} minCliqueCount={25881} firstCliqueCount={27104}
+                      progressPct={10} workIndex={1} totalPairs={10} />);
+    expect(screen.getByText('25,881')).toBeInTheDocument();
+    expect(screen.getByText('+126 above min')).toBeInTheDocument();
+  });
+
   it('shows placeholders before any data', () => {
-    render(<StatCards stageId={null} cliqueCount={null} firstCliqueCount={null}
+    render(<StatCards stageId={null} cliqueCount={null} minCliqueCount={null} firstCliqueCount={null}
                       progressPct={null} workIndex={0} totalPairs={0} />);
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
   });
