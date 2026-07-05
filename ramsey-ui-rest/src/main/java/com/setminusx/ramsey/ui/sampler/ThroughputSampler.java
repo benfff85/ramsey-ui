@@ -9,6 +9,11 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Component
 public class ThroughputSampler {
@@ -23,7 +28,8 @@ public class ThroughputSampler {
     private final ThroughputBroadcaster broadcaster;
     private final Clock clock;
 
-    private Baseline last;
+    // per-campaign baselines: each ACTIVE campaign's rate is computed independently
+    private final Map<Integer, Baseline> last = new HashMap<>();
 
     public ThroughputSampler(ActiveStageResolver resolver, RedisLiveStageService redis,
                              ThroughputBuffer buffer, ThroughputBroadcaster broadcaster, Clock clock) {
@@ -47,36 +53,54 @@ public class ThroughputSampler {
 
     private void doSample() {
         long now = clock.millis();
-        ActiveStage active = resolver.resolveActiveStage();
+        List<ActiveStage> actives = resolver.resolveActiveStages();
 
-        if (active == null) {
-            last = null;
-            emit(new LiveTick(now, null, 0.0, 0, 0, 0, 0.0, null));
+        if (actives.isEmpty()) {
+            last.clear();
+            emit(new LiveTick(now, null, null, 0.0, 0, 0, 0, 0.0, null));
             return;
         }
 
+        // drop baselines of campaigns that are no longer active (banked/rotated away)
+        Set<Integer> activeIds = actives.stream().map(ActiveStage::campaignId).collect(Collectors.toSet());
+        last.keySet().retainAll(activeIds);
+
+        for (ActiveStage active : actives) {
+            try {
+                sampleCampaign(now, active);
+            } catch (Exception e) {
+                // one campaign's Redis blip must not starve the others' ticks
+                log.debug("live tick skipped for campaign {}: {}", active.campaignId(), e.toString());
+            }
+        }
+    }
+
+    private void sampleCampaign(long now, ActiveStage active) {
+        int campaignId = active.campaignId();
         int stageId = active.stageId();
         long count = redis.getProcessedCount(stageId);
 
+        Baseline base = last.get(campaignId);
         double unitsPerSec;
-        if (last == null || last.stageId() != stageId) {
+        if (base == null || base.stageId() != stageId) {
             unitsPerSec = 0.0; // re-baseline on first sample / stage change (no cross-stage spike)
         } else {
-            double elapsedSec = (now - last.ts()) / 1000.0;
-            double delta = count - last.count();
+            double elapsedSec = (now - base.ts()) / 1000.0;
+            double delta = count - base.count();
             unitsPerSec = (elapsedSec > 0 && delta > 0) ? delta / elapsedSec : 0.0;
         }
-        last = new Baseline(stageId, count, now);
+        last.put(campaignId, new Baseline(stageId, count, now));
 
         long workIndex = redis.getWorkIndex(stageId);
         long totalPairs = redis.getTotalPairs(stageId);
         double progressPct = totalPairs > 0 ? Math.min(100.0, (workIndex * 100.0) / totalPairs) : 0.0;
 
-        emit(new LiveTick(now, stageId, unitsPerSec, count, workIndex, totalPairs, progressPct, active.cliqueCount()));
+        emit(new LiveTick(now, campaignId, stageId, unitsPerSec, count, workIndex, totalPairs,
+                progressPct, active.cliqueCount()));
     }
 
     private void emit(LiveTick tick) {
-        buffer.add(new ThroughputSample(tick.ts(), tick.stageId(), tick.unitsPerSec()));
+        buffer.add(new ThroughputSample(tick.ts(), tick.campaignId(), tick.stageId(), tick.unitsPerSec()));
         broadcaster.broadcast(tick);
     }
 }

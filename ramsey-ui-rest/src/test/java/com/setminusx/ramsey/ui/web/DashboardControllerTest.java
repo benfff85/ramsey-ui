@@ -48,13 +48,24 @@ class DashboardControllerTest {
 
     @Test
     void history_filters_by_window() {
-        buffer.add(new ThroughputSample(1000, 42, 0.0));
-        buffer.add(new ThroughputSample(2000, 42, 123.0));
+        buffer.add(new ThroughputSample(1000, 10, 42, 0.0));
+        buffer.add(new ThroughputSample(2000, 12, 43, 123.0));
         // clock=2000ms; window=2s => since=0 => both points
-        assertThat(controller.history(2)).hasSize(2);
+        assertThat(controller.history(2, null)).hasSize(2);
         // window=0 => since=2000 => only ts>=2000 => one point
-        assertThat(controller.history(0)).hasSize(1);
+        assertThat(controller.history(0, null)).hasSize(1);
         // null window => default (7200s) => since well before 1000 => all points
-        assertThat(controller.history(null)).hasSize(2);
+        assertThat(controller.history(null, null)).hasSize(2);
+    }
+
+    @Test
+    void history_filters_by_campaign() {
+        buffer.add(new ThroughputSample(1000, 10, 42, 5.0));
+        buffer.add(new ThroughputSample(1000, 12, 43, 7.0));
+        buffer.add(new ThroughputSample(2000, 12, 43, 9.0));
+        assertThat(controller.history(null, 12)).extracting(ThroughputSample::unitsPerSec)
+                .containsExactly(7.0, 9.0);
+        assertThat(controller.history(null, 10)).hasSize(1);
+        assertThat(controller.history(null, null)).hasSize(3);
     }
 }

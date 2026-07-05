@@ -45,9 +45,14 @@ public class DashboardController {
     }
 
     @GetMapping("/throughput/history")
-    public List<ThroughputSample> history(@RequestParam(required = false) Integer window) {
+    public List<ThroughputSample> history(@RequestParam(required = false) Integer window,
+                                          @RequestParam(required = false) Integer campaignId) {
         int windowSeconds = window != null ? window : props.throughput().defaultWindowSeconds();
         long since = clock.millis() - windowSeconds * 1000L;
-        return throughputBuffer.snapshotSince(since);
+        List<ThroughputSample> samples = throughputBuffer.snapshotSince(since);
+        if (campaignId == null) {
+            return samples;
+        }
+        return samples.stream().filter(s -> campaignId.equals(s.campaignId())).toList();
     }
 }

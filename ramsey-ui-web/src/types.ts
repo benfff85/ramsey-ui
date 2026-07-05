@@ -1,9 +1,9 @@
-export interface ThroughputSample { ts: number; stageId: number | null; unitsPerSec: number; }
+export interface ThroughputSample { ts: number; campaignId: number | null; stageId: number | null; unitsPerSec: number; }
 
 // Per-second socket payload: throughput + live stage stats, so the UI can drive the
 // stat cards straight off the socket and follow stage transitions.
 export interface LiveTick {
-  ts: number; stageId: number | null; unitsPerSec: number;
+  ts: number; campaignId: number | null; stageId: number | null; unitsPerSec: number;
   processedCount: number; workIndex: number; totalPairs: number;
   progressPct: number; cliqueCount: number | null;
 }

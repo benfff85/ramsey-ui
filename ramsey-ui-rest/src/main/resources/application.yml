@@ -20,5 +20,5 @@ ramsey:
   sampler:
     interval-ms: 1000
   throughput:
-    buffer-capacity: 7200
+    buffer-capacity: 21600  # shared across ACTIVE campaigns (samples are tagged); 3 campaigns x 2h @ 1/s
     default-window-seconds: 7200

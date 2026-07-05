@@ -1,10 +1,11 @@
 package com.setminusx.ramsey.ui.sampler;
 
 import com.setminusx.ramsey.ui.client.MwClient;
-import com.setminusx.ramsey.ui.model.CampaignDto;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
+import java.util.List;
+import java.util.Objects;
 
 @Component
 public class ActiveStageResolver {
@@ -14,7 +15,7 @@ public class ActiveStageResolver {
     private final MwClient mw;
     private final Clock clock;
 
-    private ActiveStage cached;
+    private List<ActiveStage> cached = List.of();
     private long cachedAtMillis;
     private boolean haveCached; // first call always computes (avoids a sentinel-overflow guard)
 
@@ -23,32 +24,35 @@ public class ActiveStageResolver {
         this.clock = clock;
     }
 
-    public synchronized ActiveStage resolveActiveStage() {
+    /**
+     * The active stage of EVERY campaign currently marked ACTIVE (the system may run several
+     * concurrently, e.g. the multi-seed campaign on the local fleet plus the long-running
+     * campaign the remote workers grind). Campaigns without an ACTIVE stage are omitted.
+     */
+    public synchronized List<ActiveStage> resolveActiveStages() {
         long now = clock.millis();
         if (haveCached && now - cachedAtMillis < CACHE_MILLIS) {
             return cached;
         }
         try {
-            cached = computeActiveStage();
+            cached = computeActiveStages();
         } catch (Exception e) {
-            cached = null; // mw unreachable -> no active stage; sampler emits an empty tick
+            cached = List.of(); // mw unreachable -> no active stages; sampler emits an empty tick
         }
         cachedAtMillis = now;
         haveCached = true;
         return cached;
     }
 
-    private ActiveStage computeActiveStage() {
-        CampaignDto active = mw.getCampaigns().stream()
+    private List<ActiveStage> computeActiveStages() {
+        return mw.getCampaigns().stream()
                 .filter(c -> "ACTIVE".equalsIgnoreCase(c.status()))
-                .findFirst()
-                .orElse(null);
-        if (active == null) return null;
-
-        return mw.getProgression(active.campaignId()).stream()
-                .filter(p -> "ACTIVE".equalsIgnoreCase(p.status()))
-                .map(p -> new ActiveStage(p.stageId(), p.cliqueCount()))
-                .findFirst()
-                .orElse(null);
+                .map(c -> mw.getProgression(c.campaignId()).stream()
+                        .filter(p -> "ACTIVE".equalsIgnoreCase(p.status()))
+                        .map(p -> new ActiveStage(c.campaignId(), p.stageId(), p.cliqueCount()))
+                        .findFirst()
+                        .orElse(null))
+                .filter(Objects::nonNull)
+                .toList();
     }
 }
