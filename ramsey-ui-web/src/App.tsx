@@ -4,6 +4,7 @@ import { Sidebar, type Interval } from './components/Sidebar';
 import { StatCards, sortCampaigns } from './components/StatCards';
 import { ThroughputChart } from './components/ThroughputChart';
 import { CliqueProgressionChart } from './components/CliqueProgressionChart';
+import { CampaignOverlayChart } from './components/CampaignOverlayChart';
 import { ImprovementChart } from './components/ImprovementChart';
 import { BestResultsTable } from './components/BestResultsTable';
 import { RawDataTable } from './components/RawDataTable';
@@ -82,11 +83,14 @@ export default function App() {
                    progressPct={progressPct} workIndex={workIndex} totalPairs={totalPairs} />
         <ThroughputChart samples={samples} interval={interval} />
         {progression.length > 0 && (
+          <div className="grid-2">
+            <CliqueProgressionChart progression={progression} />
+            <ImprovementChart progression={progression} />
+          </div>
+        )}
+        <CampaignOverlayChart campaigns={campaigns} />
+        {progression.length > 0 && (
           <>
-            <div className="grid-2">
-              <CliqueProgressionChart progression={progression} />
-              <ImprovementChart progression={progression} />
-            </div>
             <BestResultsTable bestResults={bestResults} currentClique={cliqueCount ?? 0} />
             <RawDataTable progression={progression} />
           </>

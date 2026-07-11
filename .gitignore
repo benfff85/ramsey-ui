@@ -87,3 +87,4 @@ target/
 node_modules/
 dist/
 .playwright-cli/
+*.tsbuildinfo
