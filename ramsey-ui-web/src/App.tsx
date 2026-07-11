@@ -4,6 +4,7 @@ import { Sidebar, type Interval } from './components/Sidebar';
 import { StatCards, sortCampaigns } from './components/StatCards';
 import { ThroughputChart } from './components/ThroughputChart';
 import { CliqueProgressionChart } from './components/CliqueProgressionChart';
+import { CampaignOverlayChart } from './components/CampaignOverlayChart';
 import { ImprovementChart } from './components/ImprovementChart';
 import { BestResultsTable } from './components/BestResultsTable';
 import { RawDataTable } from './components/RawDataTable';
@@ -60,6 +61,13 @@ export default function App() {
   // Live scalars come from the socket; fall back to progression before the first tick arrives.
   const stageId = latest?.stageId ?? fallbackCurrent?.stageId ?? null;
   const cliqueCount = latest?.cliqueCount ?? fallbackCurrent?.cliqueCount ?? null;
+
+  // The campaign's own floor: min over every stage it has produced (plus the live count,
+  // in case the current stage is a fresh record the progression fetch hasn't caught up to).
+  const progMin = sortedProg.reduce<number | null>(
+    (m, p) => (m == null || p.cliqueCount < m ? p.cliqueCount : m), null);
+  const minCliqueCount = progMin == null ? cliqueCount
+    : cliqueCount == null ? progMin : Math.min(progMin, cliqueCount);
   const progressPct = latest?.progressPct ?? null;
   const workIndex = latest?.workIndex ?? 0;
   const totalPairs = latest?.totalPairs ?? 0;
@@ -71,15 +79,18 @@ export default function App() {
                lastUpdated={new Date().toLocaleTimeString()} connected={connected}
                collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)} />
       <main className="main">
-        <StatCards stageId={stageId} cliqueCount={cliqueCount} firstCliqueCount={firstCliqueCount}
+        <StatCards stageId={stageId} cliqueCount={cliqueCount} minCliqueCount={minCliqueCount} firstCliqueCount={firstCliqueCount}
                    progressPct={progressPct} workIndex={workIndex} totalPairs={totalPairs} />
         <ThroughputChart samples={samples} interval={interval} />
         {progression.length > 0 && (
+          <div className="grid-2">
+            <CliqueProgressionChart progression={progression} />
+            <ImprovementChart progression={progression} />
+          </div>
+        )}
+        <CampaignOverlayChart campaigns={campaigns} />
+        {progression.length > 0 && (
           <>
-            <div className="grid-2">
-              <CliqueProgressionChart progression={progression} />
-              <ImprovementChart progression={progression} />
-            </div>
             <BestResultsTable bestResults={bestResults} currentClique={cliqueCount ?? 0} />
             <RawDataTable progression={progression} />
           </>

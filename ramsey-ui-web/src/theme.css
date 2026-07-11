@@ -13,6 +13,18 @@
   --red: #ff6b6b;
   --glow: 0 0 10px rgba(76, 214, 232, 0.55);
 
+  /* Categorical series slots for multi-campaign charts (fixed order, never cycled).
+     Validated against --panel #111726: all >= 3:1; adjacent-pair CVD in the floor
+     band, relieved by the labeled legend. */
+  --series-1: #3987e5;
+  --series-2: #199e70;
+  --series-3: #c98500;
+  --series-4: #008300;
+  --series-5: #9085e9;
+  --series-6: #e66767;
+  --series-7: #d55181;
+  --series-8: #d95926;
+
   --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, 'Cascadia Code', monospace;
 
@@ -171,7 +183,7 @@ body {
 /* ---------- stat readouts ---------- */
 .statcards {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 14px;
 }
 .stat {
@@ -298,3 +310,23 @@ td.num, th.num { font-family: var(--font-mono); }
 @media (prefers-reduced-motion: reduce) {
   .status__dot--ok, .live-badge__dot { animation: none; }
 }
+
+/* ---------- cross-campaign overlay ---------- */
+.overlay-caption { color: var(--muted); font-size: 11px; font-family: var(--font-mono); }
+
+.overlay-legend {
+  display: flex; flex-wrap: wrap; gap: 6px 18px;
+  margin-top: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--text);
+}
+.overlay-legend__item { display: inline-flex; align-items: center; gap: 7px; }
+.overlay-legend__swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.overlay-legend__live {
+  color: var(--accent); border: 1px solid var(--accent-dim); border-radius: 4px;
+  padding: 0 5px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+}
+
+.overlay-tip {
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; font-family: var(--font-mono); font-size: 12px;
+}
+.overlay-tip__label { color: var(--muted); margin-bottom: 4px; }
