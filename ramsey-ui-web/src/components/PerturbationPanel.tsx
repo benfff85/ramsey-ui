@@ -53,7 +53,7 @@ export function PerturbationPanel({ progression }: { progression: ProgressionPoi
         <div className="ils__next">
           <div className="ils__nextlabel">
             <span>next kick in <strong>{fmt(nextKickIn)}</strong> stages{eta ? ` · ${eta}` : ''}</span>
-            <span className="ils__muted">{fmt(stagesSinceKick)} / {fmt(WALL_STAGES)} stages walled</span>
+            <span className="ils__muted">{fmt(stagesSinceKick)} / {fmt(WALL_STAGES)} stages since kick</span>
           </div>
           <div className="ils__bar"><div className="ils__barfill" style={{ width: `${pct}%` }} /></div>
         </div>
