@@ -330,3 +330,22 @@ td.num, th.num { font-family: var(--font-mono); }
   padding: 8px 10px; font-family: var(--font-mono); font-size: 12px;
 }
 .overlay-tip__label { color: var(--muted); margin-bottom: 4px; }
+
+/* ---------- fleet panel ---------- */
+.fleets { display: flex; flex-direction: column; gap: 8px; }
+.fleet-row {
+  display: grid; grid-template-columns: 1fr 1fr auto; align-items: center; gap: 12px;
+  font-family: var(--font-mono); font-size: 13px;
+  padding: 8px 10px; border: 1px solid var(--border-soft); border-radius: 9px; background: var(--panel-2);
+}
+.fleet-row__platform { color: var(--text); font-weight: 600; }
+.fleet-row__target { color: var(--muted); }
+.fleet-row__state {
+  font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 5px; justify-self: end;
+}
+.fleet-row__state--running { color: var(--green); border: 1px solid var(--green); }
+.fleet-row__state--paused  { color: var(--red);   border: 1px solid var(--red); }
+.fleet-row__state--idle    { color: var(--faint); border: 1px solid var(--border); }
+
+.chart-note { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }

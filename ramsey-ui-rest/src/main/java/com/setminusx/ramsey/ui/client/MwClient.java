@@ -2,6 +2,7 @@ package com.setminusx.ramsey.ui.client;
 
 import com.setminusx.ramsey.ui.config.RamseyProperties;
 import com.setminusx.ramsey.ui.model.CampaignDto;
+import com.setminusx.ramsey.ui.model.FleetDto;
 import com.setminusx.ramsey.ui.model.ProgressionPointDto;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
@@ -29,6 +30,14 @@ public class MwClient {
     public List<ProgressionPointDto> getProgression(int campaignId) {
         List<ProgressionPointDto> body = restClient.get()
                 .uri("/api/ramsey/campaigns/{id}/progression", campaignId)
+                .retrieve()
+                .body(new ParameterizedTypeReference<>() {});
+        return body != null ? body : List.of();
+    }
+
+    public List<FleetDto> getFleets() {
+        List<FleetDto> body = restClient.get()
+                .uri("/api/ramsey/fleets")
                 .retrieve()
                 .body(new ParameterizedTypeReference<>() {});
         return body != null ? body : List.of();

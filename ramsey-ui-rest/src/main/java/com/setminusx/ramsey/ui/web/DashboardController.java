@@ -34,6 +34,11 @@ public class DashboardController {
         return mwClient.getCampaigns();
     }
 
+    @GetMapping("/fleets")
+    public List<FleetDto> fleets() {
+        return mwClient.getFleets();
+    }
+
     @GetMapping("/campaigns/{id}/progression")
     public List<ProgressionPointDto> progression(@PathVariable int id) {
         return mwClient.getProgression(id);

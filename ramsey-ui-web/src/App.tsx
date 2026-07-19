@@ -5,6 +5,7 @@ import { StatCards, sortCampaigns } from './components/StatCards';
 import { ThroughputChart } from './components/ThroughputChart';
 import { CliqueProgressionChart } from './components/CliqueProgressionChart';
 import { CampaignOverlayChart } from './components/CampaignOverlayChart';
+import { FleetPanel } from './components/FleetPanel';
 import { ImprovementChart } from './components/ImprovementChart';
 import { BestResultsTable } from './components/BestResultsTable';
 import { RawDataTable } from './components/RawDataTable';
@@ -81,6 +82,7 @@ export default function App() {
       <main className="main">
         <StatCards stageId={stageId} cliqueCount={cliqueCount} minCliqueCount={minCliqueCount} firstCliqueCount={firstCliqueCount}
                    progressPct={progressPct} workIndex={workIndex} totalPairs={totalPairs} />
+        <FleetPanel />
         <ThroughputChart samples={samples} interval={interval} />
         {progression.length > 0 && (
           <div className="grid-2">

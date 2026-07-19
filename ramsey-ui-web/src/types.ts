@@ -20,3 +20,7 @@ export interface ProgressionPointDto {
   stageId: number; graphId: number | null; cliqueCount: number;
   status: string; createdDate: string | null;
 }
+export interface FleetDto {
+  platform: string; campaignId: number | null; status: string;
+  note: string | null; updatedDate: string | null;
+}
