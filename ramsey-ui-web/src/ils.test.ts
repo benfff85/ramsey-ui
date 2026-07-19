@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeIls } from './ils';
+import { analyzeIls, epochSeries } from './ils';
 import type { ProgressionPointDto } from './types';
 
 const pt = (stageId: number, cliqueCount: number, createdDate: string | null = null): ProgressionPointDto =>
@@ -66,5 +66,28 @@ describe('analyzeIls', () => {
     const ils = analyzeIls(prog)!;
     expect(ils.nextKickIn).toBe(498);
     expect(ils.etaHours).toBeCloseTo(498 * 60 / 3600, 1);
+  });
+});
+
+describe('epochSeries', () => {
+  it('is a single "initial" series when there are no kicks', () => {
+    const s = epochSeries([pt(1, 27000), pt(2, 26000), pt(3, 25840)])!;
+    expect(s.epochs.map((e) => e.label)).toEqual(['initial']);
+    expect(s.epochs[0].floor).toBe(25840);
+    expect(s.data).toEqual([{ stage: 1, e0: 27000 }, { stage: 2, e0: 26000 }, { stage: 3, e0: 25840 }]);
+  });
+
+  it('splits into initial + one series per kick, each row keyed to its own epoch', () => {
+    const s = epochSeries([
+      pt(1, 25840), pt(2, 26000),
+      pt(10, 72000), pt(11, 26050),
+    ])!;
+    expect(s.epochs.map((e) => e.label)).toEqual(['initial', 'kick 1']);
+    // pre-kick rows carry e0 only; kick rows carry e1 only (gap-broken lines)
+    expect(s.data[0]).toEqual({ stage: 1, e0: 25840 });
+    expect(s.data[2]).toEqual({ stage: 10, e1: 72000 });
+    expect(s.epochs[0].floor).toBe(25840); // initial descent floor
+    expect(s.epochs[1].floor).toBe(26050); // kick-1 basin floor
+    expect(s.epochs[0].color).not.toEqual(s.epochs[1].color);
   });
 });

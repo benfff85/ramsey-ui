@@ -4,7 +4,6 @@ import { Sidebar, type Interval } from './components/Sidebar';
 import { StatCards, sortCampaigns } from './components/StatCards';
 import { ThroughputChart } from './components/ThroughputChart';
 import { CliqueProgressionChart } from './components/CliqueProgressionChart';
-import { CampaignOverlayChart } from './components/CampaignOverlayChart';
 import { FleetPanel } from './components/FleetPanel';
 import { PerturbationPanel } from './components/PerturbationPanel';
 import { ImprovementChart } from './components/ImprovementChart';
@@ -92,7 +91,6 @@ export default function App() {
             <ImprovementChart progression={progression} />
           </div>
         )}
-        <CampaignOverlayChart campaigns={campaigns} />
         {progression.length > 0 && (
           <>
             <BestResultsTable bestResults={bestResults} currentClique={cliqueCount ?? 0} />

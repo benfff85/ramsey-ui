@@ -1,39 +1,38 @@
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from 'recharts';
 import type { ProgressionPointDto } from '../types';
-import { analyzeIls } from '../ils';
+import { analyzeIls, epochSeries } from '../ils';
 import { Card } from './Card';
 
 const fmtNum = (n: number) => n.toLocaleString('en-US');
 
 /**
- * Raw per-stage clique count on a LOG y-axis — the perturbation (ILS) cycle made
- * visible. A kick scrambles the incumbent up to ~3× the floor; the graph then
- * free-falls back over the next stages. Log scale keeps both the ~72k spike and
- * the ~26k floor legible in one view (linear would bury the floor detail), a
- * dashed reference line marks the incumbent (all-time best), and each kick is
- * marked where it fired. For a plain descending campaign it's just the descent.
+ * Raw per-stage clique count on a LOG y-axis, split into kick-epochs: the initial
+ * descent and each perturbation kick's re-descent are drawn as separate colored
+ * series (overlaid by stage), so the ILS cycle is legible at a glance — a kick jumps
+ * the count to ~3× the floor, then a new-colored line free-falls back down. Log scale
+ * keeps the ~72k spikes and the ~26k floor both readable; a dashed reference line
+ * marks the incumbent (all-time best). A plain campaign is just one "initial" series.
  */
 export function CliqueProgressionChart({ progression }: { progression: ProgressionPointDto[] }) {
-  const sorted = [...progression]
-    .filter((p) => p.cliqueCount != null)
-    .sort((a, b) => a.stageId - b.stageId);
-  const data = sorted.map((p) => ({ stage: p.stageId, clique: p.cliqueCount }));
+  const series = epochSeries(progression);
   const ils = analyzeIls(progression);
+  if (!series) return null;
 
-  const counts = data.map((d) => d.clique);
+  const counts = series.data.flatMap((row) =>
+    series.epochs.map((e) => row[e.key]).filter((v): v is number => v != null));
   const lo = counts.length ? Math.min(...counts) : 1;
   const hi = counts.length ? Math.max(...counts) : 10;
-  // Log domain padded a hair each side; must stay > 0.
   const domain: [number, number] = [Math.max(1, Math.floor(lo * 0.97)), Math.ceil(hi * 1.06)];
 
-  const title = ils
-    ? <>Clique count per stage <span className="dim">· log · {ils.kickCount} kick{ils.kickCount > 1 ? 's' : ''}</span></>
+  const multi = series.epochs.length > 1;
+  const title = multi
+    ? <>Clique count per stage <span className="dim">· log · {series.epochs.length - 1} kick{series.epochs.length > 2 ? 's' : ''}</span></>
     : <>Clique count per stage <span className="dim">· log</span></>;
 
   return (
     <Card title={title}>
       <ResponsiveContainer width="100%" height={260}>
-        <LineChart data={data} margin={{ top: 8, right: 14, bottom: 0, left: 4 }}>
+        <LineChart data={series.data} margin={{ top: 8, right: 14, bottom: 0, left: 4 }}>
           <CartesianGrid stroke="var(--border-soft)" vertical={false} />
           <XAxis dataKey="stage" type="number" domain={['dataMin', 'dataMax']}
                  stroke="var(--faint)" tickLine={false} minTickGap={40} fontSize={11}
@@ -50,14 +49,22 @@ export function CliqueProgressionChart({ progression }: { progression: Progressi
               label={{ value: `best ${fmtNum(ils.incumbent)}`, position: 'insideBottomLeft',
                 fill: 'var(--accent)', fontSize: 10, fontFamily: 'var(--font-mono)' }} />
           )}
-          {ils?.kickStageIds.map((sid) => (
-            <ReferenceLine key={sid} x={sid} stroke="var(--red)" strokeDasharray="2 3" strokeOpacity={0.7}
-              label={{ value: 'kick', position: 'top', fill: 'var(--red)', fontSize: 10, fontFamily: 'var(--font-mono)' }} />
+          {series.epochs.map((e) => (
+            <Line key={e.key} type="monotone" dataKey={e.key} stroke={e.color} strokeWidth={1.5}
+                  dot={false} isAnimationActive={false} connectNulls={false} name={e.label} />
           ))}
-          <Line type="monotone" dataKey="clique" stroke="var(--green)" strokeWidth={1.5}
-                dot={false} isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>
+      {multi && (
+        <div className="overlay-legend">
+          {series.epochs.map((e) => (
+            <span key={e.key} className="overlay-legend__item">
+              <span className="overlay-legend__swatch" style={{ background: e.color }} />
+              {e.label} <span className="dim">· floor {fmtNum(e.floor)}</span>
+            </span>
+          ))}
+        </div>
+      )}
     </Card>
   );
 }

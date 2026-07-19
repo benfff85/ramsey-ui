@@ -311,25 +311,14 @@ td.num, th.num { font-family: var(--font-mono); }
   .status__dot--ok, .live-badge__dot { animation: none; }
 }
 
-/* ---------- cross-campaign overlay ---------- */
-.overlay-caption { color: var(--muted); font-size: 11px; font-family: var(--font-mono); }
-
+/* ---------- multi-series legend (per-kick epochs) ---------- */
 .overlay-legend {
   display: flex; flex-wrap: wrap; gap: 6px 18px;
   margin-top: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--text);
 }
 .overlay-legend__item { display: inline-flex; align-items: center; gap: 7px; }
 .overlay-legend__swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
-.overlay-legend__live {
-  color: var(--accent); border: 1px solid var(--accent-dim); border-radius: 4px;
-  padding: 0 5px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
-}
-
-.overlay-tip {
-  background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
-  padding: 8px 10px; font-family: var(--font-mono); font-size: 12px;
-}
-.overlay-tip__label { color: var(--muted); margin-bottom: 4px; }
+.overlay-legend .dim { color: var(--faint); }
 
 /* ---------- fleet panel ---------- */
 .fleets { display: flex; flex-direction: column; gap: 8px; }

@@ -77,3 +77,49 @@ export function analyzeIls(progression: ProgressionPointDto[]): IlsState | null 
   return { incumbent, kickStageIds, kickCount, lastKickStageId, stagesSinceKick,
     nextKickIn, basinFloor, nextMultiplier, etaHours };
 }
+
+// Categorical colors for the per-kick series (mirror theme.css --series-*), cycled.
+export const SERIES_COLORS = [
+  'var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)',
+  'var(--series-5)', 'var(--series-6)', 'var(--series-7)', 'var(--series-8)',
+];
+
+export interface EpochMeta { key: string; label: string; floor: number; color: string }
+export interface EpochSeries {
+  epochs: EpochMeta[];
+  // One row per stage; each row sets only its own epoch's key (others undefined) so
+  // recharts draws a separate, gap-broken line per epoch (the kick jump is a real gap).
+  data: Array<Record<string, number>>;
+}
+
+/**
+ * Split a campaign's progression into kick-epochs: everything before the first kick is
+ * the "initial" descent, then each kick starts a new epoch ("kick 1", "kick 2", …).
+ * Each epoch becomes its own colored series so the chart overlays them by stage. Always
+ * returns at least one epoch (a campaign with no kicks is a single "initial" series).
+ */
+export function epochSeries(progression: ProgressionPointDto[]): EpochSeries | null {
+  const sorted = [...progression]
+    .filter((p) => p.cliqueCount != null)
+    .sort((a, b) => a.stageId - b.stageId);
+  if (!sorted.length) return null;
+
+  const ils = analyzeIls(progression);
+  const kicks = ils ? ils.kickStageIds : [];
+  const epochOf = (stageId: number) => kicks.filter((k) => k <= stageId).length;
+  const nEpochs = kicks.length + 1;
+
+  const data = sorted.map((p) => ({ stage: p.stageId, [`e${epochOf(p.stageId)}`]: p.cliqueCount }));
+
+  const epochs: EpochMeta[] = [];
+  for (let e = 0; e < nEpochs; e++) {
+    const pts = sorted.filter((p) => epochOf(p.stageId) === e);
+    epochs.push({
+      key: `e${e}`,
+      label: e === 0 ? 'initial' : `kick ${e}`,
+      floor: Math.min(...pts.map((p) => p.cliqueCount)),
+      color: SERIES_COLORS[e % SERIES_COLORS.length],
+    });
+  }
+  return { epochs, data };
+}
