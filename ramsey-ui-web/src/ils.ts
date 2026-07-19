@@ -87,16 +87,19 @@ export const SERIES_COLORS = [
 export interface EpochMeta { key: string; label: string; floor: number; color: string }
 export interface EpochSeries {
   epochs: EpochMeta[];
-  // One row per stage; each row sets only its own epoch's key (others undefined) so
-  // recharts draws a separate, gap-broken line per epoch (the kick jump is a real gap).
+  // One row per x = "stages since the epoch started" (all epochs re-based to 0), so the
+  // series OVERLAY on a common left edge. Each row sets a key only for epochs that have a
+  // point at that offset (others undefined → gap-broken lines).
   data: Array<Record<string, number>>;
+  xMax: number; // x-domain cap: focuses the view on the kick-descent timescale
 }
 
 /**
- * Split a campaign's progression into kick-epochs: everything before the first kick is
- * the "initial" descent, then each kick starts a new epoch ("kick 1", "kick 2", …).
- * Each epoch becomes its own colored series so the chart overlays them by stage. Always
- * returns at least one epoch (a campaign with no kicks is a single "initial" series).
+ * Split a campaign's progression into kick-epochs — the "initial" descent, then one per
+ * kick ("kick 1", "kick 2", …) — and re-base each to x=0 (stages since that epoch began)
+ * so they overlay on a shared origin. This makes the descents directly comparable: every
+ * kick free-falls from ~3× the floor, and you can see whether successive kicks bottom out
+ * closer to the incumbent. Always returns at least one epoch (no kicks → single "initial").
  */
 export function epochSeries(progression: ProgressionPointDto[]): EpochSeries | null {
   const sorted = [...progression]
@@ -109,17 +112,29 @@ export function epochSeries(progression: ProgressionPointDto[]): EpochSeries | n
   const epochOf = (stageId: number) => kicks.filter((k) => k <= stageId).length;
   const nEpochs = kicks.length + 1;
 
-  const data = sorted.map((p) => ({ stage: p.stageId, [`e${epochOf(p.stageId)}`]: p.cliqueCount }));
+  // Bucket points per epoch, preserving stage order; the index within a bucket is x.
+  const buckets: number[][] = Array.from({ length: nEpochs }, () => []);
+  for (const p of sorted) buckets[epochOf(p.stageId)].push(p.cliqueCount);
 
-  const epochs: EpochMeta[] = [];
-  for (let e = 0; e < nEpochs; e++) {
-    const pts = sorted.filter((p) => epochOf(p.stageId) === e);
-    epochs.push({
-      key: `e${e}`,
-      label: e === 0 ? 'initial' : `kick ${e}`,
-      floor: Math.min(...pts.map((p) => p.cliqueCount)),
-      color: SERIES_COLORS[e % SERIES_COLORS.length],
-    });
+  const maxLen = Math.max(...buckets.map((b) => b.length));
+  const data: Array<Record<string, number>> = [];
+  for (let x = 0; x < maxLen; x++) {
+    const row: Record<string, number> = { x };
+    buckets.forEach((b, e) => { if (x < b.length) row[`e${e}`] = b[x]; });
+    data.push(row);
   }
-  return { epochs, data };
+
+  const epochs: EpochMeta[] = buckets.map((b, e) => ({
+    key: `e${e}`,
+    label: e === 0 ? 'initial' : `kick ${e}`,
+    floor: Math.min(...b),
+    color: SERIES_COLORS[e % SERIES_COLORS.length],
+  }));
+
+  // Cap x to the kick-descent timescale so young kicks aren't squished by the long
+  // initial epoch (min 300 keeps the initial descent to the floor visible).
+  const kickLens = buckets.slice(1).map((b) => b.length);
+  const xMax = kickLens.length ? Math.max(300, ...kickLens) : maxLen;
+
+  return { epochs, data, xMax };
 }

@@ -70,24 +70,28 @@ describe('analyzeIls', () => {
 });
 
 describe('epochSeries', () => {
-  it('is a single "initial" series when there are no kicks', () => {
+  it('is a single "initial" series when there are no kicks, re-based to x=0', () => {
     const s = epochSeries([pt(1, 27000), pt(2, 26000), pt(3, 25840)])!;
     expect(s.epochs.map((e) => e.label)).toEqual(['initial']);
     expect(s.epochs[0].floor).toBe(25840);
-    expect(s.data).toEqual([{ stage: 1, e0: 27000 }, { stage: 2, e0: 26000 }, { stage: 3, e0: 25840 }]);
+    expect(s.data).toEqual([{ x: 0, e0: 27000 }, { x: 1, e0: 26000 }, { x: 2, e0: 25840 }]);
+    expect(s.xMax).toBe(3);
   });
 
-  it('splits into initial + one series per kick, each row keyed to its own epoch', () => {
+  it('overlays each epoch on a common x=0 origin (stages since epoch start)', () => {
     const s = epochSeries([
-      pt(1, 25840), pt(2, 26000),
+      pt(1, 25840), pt(2, 26000), pt(3, 26100),
       pt(10, 72000), pt(11, 26050),
     ])!;
     expect(s.epochs.map((e) => e.label)).toEqual(['initial', 'kick 1']);
-    // pre-kick rows carry e0 only; kick rows carry e1 only (gap-broken lines)
-    expect(s.data[0]).toEqual({ stage: 1, e0: 25840 });
-    expect(s.data[2]).toEqual({ stage: 10, e1: 72000 });
+    // Both epochs start at x=0: initial's first point and the kick spike share the left edge.
+    expect(s.data[0]).toEqual({ x: 0, e0: 25840, e1: 72000 });
+    expect(s.data[1]).toEqual({ x: 1, e0: 26000, e1: 26050 });
+    // initial runs longer; beyond the kick's length only e0 is present.
+    expect(s.data[2]).toEqual({ x: 2, e0: 26100 });
     expect(s.epochs[0].floor).toBe(25840); // initial descent floor
     expect(s.epochs[1].floor).toBe(26050); // kick-1 basin floor
     expect(s.epochs[0].color).not.toEqual(s.epochs[1].color);
+    expect(s.xMax).toBe(300); // min window keeps the initial descent visible
   });
 });

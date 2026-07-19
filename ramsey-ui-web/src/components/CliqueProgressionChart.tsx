@@ -6,12 +6,11 @@ import { Card } from './Card';
 const fmtNum = (n: number) => n.toLocaleString('en-US');
 
 /**
- * Raw per-stage clique count on a LOG y-axis, split into kick-epochs: the initial
- * descent and each perturbation kick's re-descent are drawn as separate colored
- * series (overlaid by stage), so the ILS cycle is legible at a glance — a kick jumps
- * the count to ~3× the floor, then a new-colored line free-falls back down. Log scale
- * keeps the ~72k spikes and the ~26k floor both readable; a dashed reference line
- * marks the incumbent (all-time best). A plain campaign is just one "initial" series.
+ * Clique count on a LOG y-axis, one colored series per kick-epoch, each re-based to
+ * x=0 (stages since that epoch began) so the descents OVERLAY on a common left edge —
+ * every kick free-falls from ~3× the floor, and you can compare where each bottoms out
+ * relative to the incumbent (dashed reference line). Log scale keeps the ~72k spikes and
+ * the ~26k floor both readable. A plain campaign is just one "initial" series.
  */
 export function CliqueProgressionChart({ progression }: { progression: ProgressionPointDto[] }) {
   const series = epochSeries(progression);
@@ -34,16 +33,18 @@ export function CliqueProgressionChart({ progression }: { progression: Progressi
       <ResponsiveContainer width="100%" height={260}>
         <LineChart data={series.data} margin={{ top: 8, right: 14, bottom: 0, left: 4 }}>
           <CartesianGrid stroke="var(--border-soft)" vertical={false} />
-          <XAxis dataKey="stage" type="number" domain={['dataMin', 'dataMax']}
+          <XAxis dataKey="x" type="number" domain={[0, series.xMax]} allowDataOverflow
                  stroke="var(--faint)" tickLine={false} minTickGap={40} fontSize={11}
-                 tickFormatter={fmtNum} allowDataOverflow />
+                 tickFormatter={fmtNum}
+                 label={{ value: 'stages since kick', position: 'insideBottom', offset: -2,
+                   fill: 'var(--faint)', fontSize: 10, fontFamily: 'var(--font-mono)' }} />
           <YAxis scale="log" domain={domain} allowDataOverflow tickFormatter={fmtNum}
                  stroke="var(--faint)" tickLine={false} axisLine={false} width={64} fontSize={11} />
           <Tooltip
             contentStyle={{ background: 'var(--panel-2)', border: '1px solid var(--border)',
               borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 12 }}
             labelStyle={{ color: 'var(--muted)' }}
-            formatter={(v: number) => [fmtNum(v), 'cliques']} labelFormatter={(s) => `stage ${fmtNum(Number(s))}`} />
+            formatter={(v: number) => [fmtNum(v), 'cliques']} labelFormatter={(s) => `+${fmtNum(Number(s))} stages`} />
           {ils && (
             <ReferenceLine y={ils.incumbent} stroke="var(--accent)" strokeDasharray="4 4" strokeOpacity={0.8}
               label={{ value: `best ${fmtNum(ils.incumbent)}`, position: 'insideBottomLeft',
