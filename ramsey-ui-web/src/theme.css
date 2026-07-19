@@ -349,3 +349,38 @@ td.num, th.num { font-family: var(--font-mono); }
 .fleet-row__state--idle    { color: var(--faint); border: 1px solid var(--border); }
 
 .chart-note { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+
+/* ---------- perturbation (ILS) panel ---------- */
+.ils { display: flex; flex-direction: column; gap: 16px; }
+.ils__stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+}
+.ils__stat {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px; border: 1px solid var(--border-soft); border-radius: 9px; background: var(--panel-2);
+}
+.ils__k {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+}
+.ils__v { font-family: var(--font-mono); font-size: 18px; font-weight: 600; color: var(--text); }
+.ils__delta { font-size: 11px; font-weight: 500; margin-left: 8px; }
+.ils__delta--good { color: var(--green); }
+.ils__delta--over { color: var(--muted); }
+
+.ils__next { display: flex; flex-direction: column; gap: 7px; }
+.ils__nextlabel {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--text);
+}
+.ils__nextlabel strong { color: var(--accent); }
+.ils__muted { color: var(--faint); font-size: 11px; }
+.ils__bar {
+  height: 7px; border-radius: 4px; background: var(--panel-2);
+  border: 1px solid var(--border-soft); overflow: hidden;
+}
+.ils__barfill {
+  height: 100%; background: var(--accent); box-shadow: var(--glow);
+  transition: width 400ms ease;
+}
+
+@media (max-width: 1080px) { .ils__stats { grid-template-columns: repeat(2, 1fr); } }

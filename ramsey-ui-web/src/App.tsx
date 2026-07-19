@@ -6,6 +6,7 @@ import { ThroughputChart } from './components/ThroughputChart';
 import { CliqueProgressionChart } from './components/CliqueProgressionChart';
 import { CampaignOverlayChart } from './components/CampaignOverlayChart';
 import { FleetPanel } from './components/FleetPanel';
+import { PerturbationPanel } from './components/PerturbationPanel';
 import { ImprovementChart } from './components/ImprovementChart';
 import { BestResultsTable } from './components/BestResultsTable';
 import { RawDataTable } from './components/RawDataTable';
@@ -84,6 +85,7 @@ export default function App() {
                    progressPct={progressPct} workIndex={workIndex} totalPairs={totalPairs} />
         <FleetPanel />
         <ThroughputChart samples={samples} interval={interval} />
+        {progression.length > 0 && <PerturbationPanel progression={progression} />}
         {progression.length > 0 && (
           <div className="grid-2">
             <CliqueProgressionChart progression={progression} />
