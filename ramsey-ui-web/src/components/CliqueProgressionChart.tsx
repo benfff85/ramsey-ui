@@ -6,11 +6,13 @@ import { Card } from './Card';
 const fmtNum = (n: number) => n.toLocaleString('en-US');
 
 /**
- * Clique count on a LOG y-axis, one colored series per kick-epoch, each re-based to
- * x=0 (stages since that epoch began) so the descents OVERLAY on a common left edge —
- * every kick free-falls from ~3× the floor, and you can compare where each bottoms out
- * relative to the incumbent (dashed reference line). Log scale keeps the ~72k spikes and
- * the ~26k floor both readable. A plain campaign is just one "initial" series.
+ * Clique count on an OFFSET-LOG y-axis, one colored series per kick-epoch, each re-based
+ * to x=0 (stages since that epoch began) so the descents OVERLAY on a common left edge.
+ * Instead of a plain log axis (where the whole interesting near-min band sits within ~1%
+ * of the floor and collapses to a sliver at the bottom), we log-scale (value − baseline)
+ * with the baseline just below the floor — this stretches the near-min region across a
+ * large share of the axis to expose the kick floors, while the tall kick spikes stay
+ * on-screen at the top. A plain campaign is just one "initial" series.
  */
 export function CliqueProgressionChart({ progression }: { progression: ProgressionPointDto[] }) {
   const series = epochSeries(progression);
@@ -21,32 +23,44 @@ export function CliqueProgressionChart({ progression }: { progression: Progressi
     series.epochs.map((e) => row[e.key]).filter((v): v is number => v != null));
   const lo = counts.length ? Math.min(...counts) : 1;
   const hi = counts.length ? Math.max(...counts) : 10;
-  const domain: [number, number] = [Math.max(1, Math.floor(lo * 0.97)), Math.ceil(hi * 1.06)];
+
+  // Offset-log: subtract a baseline just below the floor, then log-scale. The smaller the
+  // offset (baseline closer to the floor), the more aggressively the near-min band spreads.
+  const offset = Math.max(1, Math.round(lo * 0.001)); // ~26 at a ~25,840 floor
+  const baseline = lo - offset;
+  const shift = (v: number) => v - baseline;
+  const data = series.data.map((row) => {
+    const out: Record<string, number> = { x: row.x };
+    for (const e of series.epochs) if (row[e.key] != null) out[e.key] = shift(row[e.key]);
+    return out;
+  });
+  const domain: [number, number] = [Math.max(1, Math.floor(offset * 0.9)), Math.ceil(shift(hi) * 1.06)];
+  const yFmt = (v: number) => fmtNum(Math.round(v + baseline));
 
   const multi = series.epochs.length > 1;
   const title = multi
-    ? <>Clique count per stage <span className="dim">· log · {series.epochs.length - 1} kick{series.epochs.length > 2 ? 's' : ''}</span></>
-    : <>Clique count per stage <span className="dim">· log</span></>;
+    ? <>Clique count per stage <span className="dim">· offset-log · {series.epochs.length - 1} kick{series.epochs.length > 2 ? 's' : ''}</span></>
+    : <>Clique count per stage <span className="dim">· offset-log</span></>;
 
   return (
     <Card title={title}>
       <ResponsiveContainer width="100%" height={260}>
-        <LineChart data={series.data} margin={{ top: 8, right: 14, bottom: 0, left: 4 }}>
+        <LineChart data={data} margin={{ top: 8, right: 14, bottom: 0, left: 4 }}>
           <CartesianGrid stroke="var(--border-soft)" vertical={false} />
           <XAxis dataKey="x" type="number" domain={[0, series.xMax]} allowDataOverflow
                  stroke="var(--faint)" tickLine={false} minTickGap={40} fontSize={11}
                  tickFormatter={fmtNum}
                  label={{ value: 'stages since kick', position: 'insideBottom', offset: -2,
                    fill: 'var(--faint)', fontSize: 10, fontFamily: 'var(--font-mono)' }} />
-          <YAxis scale="log" domain={domain} allowDataOverflow tickFormatter={fmtNum}
+          <YAxis scale="log" domain={domain} allowDataOverflow tickFormatter={yFmt}
                  stroke="var(--faint)" tickLine={false} axisLine={false} width={64} fontSize={11} />
           <Tooltip
             contentStyle={{ background: 'var(--panel-2)', border: '1px solid var(--border)',
               borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 12 }}
             labelStyle={{ color: 'var(--muted)' }}
-            formatter={(v: number) => [fmtNum(v), 'cliques']} labelFormatter={(s) => `+${fmtNum(Number(s))} stages`} />
+            formatter={(v: number) => [yFmt(v), 'cliques']} labelFormatter={(s) => `+${fmtNum(Number(s))} stages`} />
           {ils && (
-            <ReferenceLine y={ils.incumbent} stroke="var(--accent)" strokeDasharray="4 4" strokeOpacity={0.8}
+            <ReferenceLine y={shift(ils.incumbent)} stroke="var(--accent)" strokeDasharray="4 4" strokeOpacity={0.8}
               label={{ value: `best ${fmtNum(ils.incumbent)}`, position: 'insideBottomLeft',
                 fill: 'var(--accent)', fontSize: 10, fontFamily: 'var(--font-mono)' }} />
           )}
