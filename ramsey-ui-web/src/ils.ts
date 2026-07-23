@@ -6,8 +6,8 @@ import type { ProgressionPointDto } from './types';
 // backend endpoint. If those env values change in the QM, update these to match.
 export const KICK_FACTOR = 1.5;
 export const WALL_STAGES = 500;
-export const BASE_EDGE_PAIRS = 30;
-export const ESCALATION_CAP = 4;
+export const BASE_EDGE_PAIRS = 60;
+export const ESCALATION_CAP = 32; // geometric: multipliers 1,2,4,8,16,32
 
 export interface IlsState {
   incumbent: number;         // global campaign min — the graph the kicks are trying to beat
@@ -59,7 +59,7 @@ export function analyzeIls(progression: ProgressionPointDto[]): IlsState | null 
   // it, so they count as the fruitless streak. Next kick strength = min(streak + 1, cap).
   const minStageId = sorted.find((p) => p.cliqueCount === incumbent)!.stageId;
   const fruitlessStreak = kickStageIds.filter((id) => id > minStageId).length;
-  const nextMultiplier = Math.min(fruitlessStreak + 1, ESCALATION_CAP);
+  const nextMultiplier = Math.min(1 << Math.min(fruitlessStreak, 30), ESCALATION_CAP);
 
   // Rough ETA: seconds/stage over the most recent near-floor stages (excludes the fast
   // re-descent, which resolves ~1 stage/sec and would wildly under-estimate the wall rate).

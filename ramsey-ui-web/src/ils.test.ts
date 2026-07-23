@@ -41,7 +41,11 @@ describe('analyzeIls', () => {
     expect(ils.nextMultiplier).toBe(1);
   });
 
-  it('counts multiple kicks and caps escalation at 4', () => {
+  it('escalates geometrically and caps at 32', () => {
+    // 2 fruitless kicks -> streak 2 -> 1<<2 = x4 next
+    const two = [pt(1, 25840), pt(10, 72000), pt(11, 26000), pt(20, 72000), pt(21, 26000)];
+    expect(analyzeIls(two)!.nextMultiplier).toBe(4);
+    // 5 fruitless kicks -> 1<<5 = 32 (at the cap); a 6th stays capped at 32
     const prog = [
       pt(1, 25840),
       pt(10, 72000), pt(11, 26000),
@@ -49,10 +53,11 @@ describe('analyzeIls', () => {
       pt(30, 72000), pt(31, 26000),
       pt(40, 72000), pt(41, 26000),
       pt(50, 72000), pt(51, 26000),
+      pt(60, 72000), pt(61, 26000),
     ];
     const ils = analyzeIls(prog)!;
-    expect(ils.kickCount).toBe(5);
-    expect(ils.nextMultiplier).toBe(4); // min(5 + 1, cap 4)
+    expect(ils.kickCount).toBe(6);
+    expect(ils.nextMultiplier).toBe(32); // min(1<<6, cap 32)
   });
 
   it('estimates ETA from the recent near-floor stage rate', () => {
