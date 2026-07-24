@@ -4,14 +4,13 @@ import type { ProgressionPointDto } from './types';
 // (PERTURBATION_WALL_STAGES / _EDGE_PAIRS / _ESCALATION_CAP). The whole ILS state is
 // derived client-side from the progression series, so the dashboard needs no extra
 // backend endpoint. If those env values change in the QM, update these to match.
-export const KICK_FACTOR = 1.5;
 export const WALL_STAGES = 500;
 export const BASE_EDGE_PAIRS = 60;
 export const ESCALATION_CAP = 32; // geometric: multipliers 1,2,4,8,16,32
 
 export interface IlsState {
   incumbent: number;         // global campaign min — the graph the kicks are trying to beat
-  kickStageIds: number[];    // stageId at each kick's spike (rising edge above threshold)
+  kickStageIds: number[];    // stageId of each perturbation kick (from the PERTURBATION details marker)
   kickCount: number;
   lastKickStageId: number;
   stagesSinceKick: number;   // stages advanced since the last kick
@@ -23,10 +22,10 @@ export interface IlsState {
 
 /**
  * Reconstruct the perturbation (ILS) state from a campaign's progression series.
- * A "kick" is the rising edge where the raw per-stage count jumps above
- * KICK_FACTOR × incumbent (a scrambled graph sits ~3× the floor); its descent then
- * falls back below the threshold. Returns null when no kick is present (i.e. the
- * campaign isn't running perturbation), so the caller can hide ILS UI.
+ * Kicks are identified authoritatively by the "PERTURBATION" details marker on the stage
+ * that a kick created (a clique-count spike heuristic is unreliable — big kicks' descents
+ * drift and cross any threshold many times, badly over-counting). Returns null when no
+ * kick is present (i.e. the campaign isn't running perturbation), so the caller hides ILS UI.
  */
 export function analyzeIls(progression: ProgressionPointDto[]): IlsState | null {
   const sorted = [...progression]
@@ -35,14 +34,10 @@ export function analyzeIls(progression: ProgressionPointDto[]): IlsState | null 
   if (!sorted.length) return null;
 
   const incumbent = Math.min(...sorted.map((p) => p.cliqueCount));
-  const threshold = incumbent * KICK_FACTOR;
 
-  const kickStageIds: number[] = [];
-  for (let i = 0; i < sorted.length; i++) {
-    const cur = sorted[i].cliqueCount;
-    const prev = i > 0 ? sorted[i - 1].cliqueCount : 0;
-    if (cur > threshold && prev <= threshold) kickStageIds.push(sorted[i].stageId);
-  }
+  const kickStageIds = sorted
+    .filter((p) => p.details != null && p.details.startsWith('PERTURBATION'))
+    .map((p) => p.stageId);
   const kickCount = kickStageIds.length;
   if (kickCount === 0) return null;
 
@@ -50,8 +45,9 @@ export function analyzeIls(progression: ProgressionPointDto[]): IlsState | null 
   const stagesSinceKick = sorted.filter((p) => p.stageId > lastKickStageId).length;
   const nextKickIn = Math.max(0, WALL_STAGES - stagesSinceKick);
 
-  // Current basin floor: best count reached since the last kick, once re-descended below threshold.
-  const postKick = sorted.filter((p) => p.stageId >= lastKickStageId && p.cliqueCount <= threshold);
+  // Current basin floor: best (min) count reached since the last kick. The kick spike is the
+  // MAX of this window, so it never affects the min — no need to filter it out.
+  const postKick = sorted.filter((p) => p.stageId >= lastKickStageId);
   const basinFloor = postKick.length ? Math.min(...postKick.map((p) => p.cliqueCount)) : null;
 
   // Escalation mirrors the QM: a kick that fails to set a NEW global min escalates strength.
@@ -64,8 +60,9 @@ export function analyzeIls(progression: ProgressionPointDto[]): IlsState | null 
   // Rough ETA: seconds/stage over the most recent near-floor stages (excludes the fast
   // re-descent, which resolves ~1 stage/sec and would wildly under-estimate the wall rate).
   let etaHours: number | null = null;
+  const floorRef = (basinFloor ?? incumbent) * 1.5; // walling stages hover near the floor; descent is 10x+
   const recent = sorted
-    .filter((p) => p.stageId > lastKickStageId && p.cliqueCount <= threshold && p.createdDate)
+    .filter((p) => p.stageId > lastKickStageId && p.cliqueCount <= floorRef && p.createdDate)
     .slice(-40);
   if (recent.length >= 2) {
     const spanSec = (new Date(recent[recent.length - 1].createdDate!).getTime()

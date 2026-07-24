@@ -19,6 +19,7 @@ export interface CampaignDto {
 export interface ProgressionPointDto {
   stageId: number; graphId: number | null; cliqueCount: number;
   status: string; createdDate: string | null;
+  details: string | null; // "PERTURBATION kick from graph ..." on kick stages
 }
 export interface FleetDto {
   platform: string; campaignId: number | null; status: string;

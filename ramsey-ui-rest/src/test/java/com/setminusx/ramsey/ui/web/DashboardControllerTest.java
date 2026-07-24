@@ -34,7 +34,7 @@ class DashboardControllerTest {
 
     @Test
     void progression_delegates_to_mw() {
-        ProgressionPointDto p = new ProgressionPointDto(42, 1, 775623L, "ACTIVE", "x");
+        ProgressionPointDto p = new ProgressionPointDto(42, 1, 775623L, "ACTIVE", "x", null);
         when(mw.getProgression(10)).thenReturn(List.of(p));
         assertThat(controller.progression(10)).containsExactly(p);
     }

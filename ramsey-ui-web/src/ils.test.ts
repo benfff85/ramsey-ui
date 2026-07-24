@@ -3,7 +3,10 @@ import { analyzeIls, epochSeries } from './ils';
 import type { ProgressionPointDto } from './types';
 
 const pt = (stageId: number, cliqueCount: number, createdDate: string | null = null): ProgressionPointDto =>
-  ({ stageId, cliqueCount, graphId: stageId, status: 'COMPLETE', createdDate });
+  ({ stageId, cliqueCount, graphId: stageId, status: 'COMPLETE', createdDate, details: null });
+// A perturbation kick stage — how kicks are identified (the PERTURBATION details marker).
+const kick = (stageId: number, cliqueCount: number, createdDate: string | null = null): ProgressionPointDto =>
+  ({ ...pt(stageId, cliqueCount, createdDate), details: 'PERTURBATION kick from graph 1 (25840), pairs=60' });
 
 describe('analyzeIls', () => {
   it('returns null for a plain descending campaign (no kicks)', () => {
@@ -11,11 +14,17 @@ describe('analyzeIls', () => {
     expect(analyzeIls(prog)).toBeNull();
   });
 
-  it('detects one kick as a rising edge above 1.5x the incumbent', () => {
+  it('does NOT count clique spikes without the PERTURBATION marker as kicks', () => {
+    // A big count with no details marker (e.g. drift during a descent) must not register.
+    const prog = [pt(1, 25840), pt(2, 200000), pt(3, 26000), pt(4, 26010)];
+    expect(analyzeIls(prog)).toBeNull();
+  });
+
+  it('detects a kick by its PERTURBATION details marker', () => {
     // floor 25840; kick to 72k at stage 10; re-descent back to ~26000
     const prog = [
       pt(1, 25840), pt(2, 25900), pt(3, 26000),
-      pt(10, 72000), pt(11, 50000), pt(12, 30000), pt(13, 26050), pt(14, 26023),
+      kick(10, 72000), pt(11, 50000), pt(12, 30000), pt(13, 26050), pt(14, 26023),
     ];
     const ils = analyzeIls(prog)!;
     expect(ils.kickCount).toBe(1);
@@ -24,18 +33,18 @@ describe('analyzeIls', () => {
     expect(ils.lastKickStageId).toBe(10);
     expect(ils.stagesSinceKick).toBe(4); // stages 11..14
     expect(ils.nextKickIn).toBe(496);    // 500 - 4
-    expect(ils.basinFloor).toBe(26023);  // best post-kick below threshold
+    expect(ils.basinFloor).toBe(26023);  // best since the kick (spike is the max, ignored)
   });
 
   it('escalates the next-kick multiplier for a fruitless kick', () => {
     // incumbent set at stage 1 (before the kick) and never beaten -> next kick escalates to x2
-    const prog = [pt(1, 25840), pt(2, 26000), pt(10, 72000), pt(11, 26050)];
+    const prog = [pt(1, 25840), pt(2, 26000), kick(10, 72000), pt(11, 26050)];
     expect(analyzeIls(prog)!.nextMultiplier).toBe(2);
   });
 
   it('does not escalate when the incumbent was set after (by) the last kick', () => {
     // the kick's descent set a new global min -> streak resets, next kick x1
-    const prog = [pt(1, 30000), pt(2, 27000), pt(10, 72000), pt(11, 25840)];
+    const prog = [pt(1, 30000), pt(2, 27000), kick(10, 72000), pt(11, 25840)];
     const ils = analyzeIls(prog)!;
     expect(ils.incumbent).toBe(25840);
     expect(ils.nextMultiplier).toBe(1);
@@ -43,17 +52,17 @@ describe('analyzeIls', () => {
 
   it('escalates geometrically and caps at 32', () => {
     // 2 fruitless kicks -> streak 2 -> 1<<2 = x4 next
-    const two = [pt(1, 25840), pt(10, 72000), pt(11, 26000), pt(20, 72000), pt(21, 26000)];
+    const two = [pt(1, 25840), kick(10, 72000), pt(11, 26000), kick(20, 72000), pt(21, 26000)];
     expect(analyzeIls(two)!.nextMultiplier).toBe(4);
-    // 5 fruitless kicks -> 1<<5 = 32 (at the cap); a 6th stays capped at 32
+    // 6 fruitless kicks -> 1<<6 capped at 32
     const prog = [
       pt(1, 25840),
-      pt(10, 72000), pt(11, 26000),
-      pt(20, 72000), pt(21, 26000),
-      pt(30, 72000), pt(31, 26000),
-      pt(40, 72000), pt(41, 26000),
-      pt(50, 72000), pt(51, 26000),
-      pt(60, 72000), pt(61, 26000),
+      kick(10, 72000), pt(11, 26000),
+      kick(20, 72000), pt(21, 26000),
+      kick(30, 72000), pt(31, 26000),
+      kick(40, 72000), pt(41, 26000),
+      kick(50, 72000), pt(51, 26000),
+      kick(60, 72000), pt(61, 26000),
     ];
     const ils = analyzeIls(prog)!;
     expect(ils.kickCount).toBe(6);
@@ -64,7 +73,7 @@ describe('analyzeIls', () => {
     // 3 near-floor stages 60s apart -> 60s/stage; 498 stages left -> 8.3h
     const prog = [
       pt(1, 25840),
-      pt(10, 72000, '2026-07-19T01:00:00Z'),
+      kick(10, 72000, '2026-07-19T01:00:00Z'),
       pt(11, 26050, '2026-07-19T01:01:00Z'),
       pt(12, 26040, '2026-07-19T01:02:00Z'),
     ];
@@ -86,7 +95,7 @@ describe('epochSeries', () => {
   it('overlays each epoch on a common x=0 origin (stages since epoch start)', () => {
     const s = epochSeries([
       pt(1, 25840), pt(2, 26000), pt(3, 26100),
-      pt(10, 72000), pt(11, 26050),
+      kick(10, 72000), pt(11, 26050),
     ])!;
     expect(s.epochs.map((e) => e.label)).toEqual(['initial', 'kick 1']);
     // Both epochs start at x=0: initial's first point and the kick spike share the left edge.
