@@ -317,7 +317,18 @@ td.num, th.num { font-family: var(--font-mono); }
   margin-top: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--text);
 }
 .overlay-legend__item { display: inline-flex; align-items: center; gap: 7px; }
-.overlay-legend__swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+.overlay-legend__swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; flex: none; }
+
+/* Clickable legend entries: click to isolate a series (dim the rest). */
+.overlay-legend__item--btn {
+  background: none; border: none; margin: 0; padding: 3px 6px; border-radius: 6px;
+  font: inherit; color: inherit; cursor: pointer;
+  transition: opacity 120ms ease, background 120ms ease;
+}
+.overlay-legend__item--btn:hover { background: rgba(255, 255, 255, 0.05); }
+.overlay-legend__item--btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.overlay-legend__item.is-dim { opacity: 0.4; }
+.overlay-legend__item.is-active { background: rgba(255, 255, 255, 0.07); font-weight: 600; }
 .overlay-legend .dim { color: var(--faint); }
 
 /* ---------- fleet panel ---------- */

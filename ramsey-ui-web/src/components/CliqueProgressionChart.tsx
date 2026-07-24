@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine } from 'recharts';
 import type { ProgressionPointDto } from '../types';
 import { analyzeIls, epochSeries } from '../ils';
@@ -12,9 +13,11 @@ const fmtNum = (n: number) => n.toLocaleString('en-US');
  * of the floor and collapses to a sliver at the bottom), we log-scale (value − baseline)
  * with the baseline just below the floor — this stretches the near-min region across a
  * large share of the axis to expose the kick floors, while the tall kick spikes stay
- * on-screen at the top. A plain campaign is just one "initial" series.
+ * on-screen at the top. A plain campaign is just one "initial" series. Click a legend
+ * entry to isolate that series (the rest dim) since near the floor the colors crowd.
  */
 export function CliqueProgressionChart({ progression }: { progression: ProgressionPointDto[] }) {
+  const [active, setActive] = useState<string | null>(null);
   const series = epochSeries(progression);
   const ils = analyzeIls(progression);
   if (!series) return null;
@@ -38,12 +41,21 @@ export function CliqueProgressionChart({ progression }: { progression: Progressi
   const yFmt = (v: number) => fmtNum(Math.round(v + baseline));
 
   const multi = series.epochs.length > 1;
+  // A highlight only makes sense if the active key is still present; otherwise treat as none.
+  const activeKey = active && series.epochs.some((e) => e.key === active) ? active : null;
+  const toggle = (key: string) => setActive((cur) => (cur === key ? null : key));
+  // Draw the highlighted series last so it sits on top of the others.
+  const drawOrder = activeKey
+    ? [...series.epochs].sort((a, b) => Number(a.key === activeKey) - Number(b.key === activeKey))
+    : series.epochs;
+
   const title = multi
     ? <>Clique count per stage <span className="dim">· offset-log · {series.epochs.length - 1} kick{series.epochs.length > 2 ? 's' : ''}</span></>
     : <>Clique count per stage <span className="dim">· offset-log</span></>;
 
   return (
-    <Card title={title}>
+    <Card title={title}
+          action={multi ? <span className="chart-note">click a series to isolate</span> : undefined}>
       <ResponsiveContainer width="100%" height={260}>
         <LineChart data={data} margin={{ top: 8, right: 14, bottom: 0, left: 4 }}>
           <CartesianGrid stroke="var(--border-soft)" vertical={false} />
@@ -64,20 +76,31 @@ export function CliqueProgressionChart({ progression }: { progression: Progressi
               label={{ value: `best ${fmtNum(ils.incumbent)}`, position: 'insideBottomLeft',
                 fill: 'var(--accent)', fontSize: 10, fontFamily: 'var(--font-mono)' }} />
           )}
-          {series.epochs.map((e) => (
-            <Line key={e.key} type="monotone" dataKey={e.key} stroke={e.color} strokeWidth={1.5}
-                  dot={false} isAnimationActive={false} connectNulls={false} name={e.label} />
-          ))}
+          {drawOrder.map((e) => {
+            const isActive = activeKey === e.key;
+            const dim = activeKey != null && !isActive;
+            return (
+              <Line key={e.key} type="monotone" dataKey={e.key} stroke={e.color}
+                    strokeWidth={isActive ? 2.75 : 1.5} strokeOpacity={dim ? 0.12 : 1}
+                    dot={false} isAnimationActive={false} connectNulls={false} name={e.label} />
+            );
+          })}
         </LineChart>
       </ResponsiveContainer>
       {multi && (
         <div className="overlay-legend">
-          {series.epochs.map((e) => (
-            <span key={e.key} className="overlay-legend__item">
-              <span className="overlay-legend__swatch" style={{ background: e.color }} />
-              {e.label} <span className="dim">· floor {fmtNum(e.floor)}</span>
-            </span>
-          ))}
+          {series.epochs.map((e) => {
+            const cls = 'overlay-legend__item overlay-legend__item--btn'
+              + (activeKey && activeKey !== e.key ? ' is-dim' : '')
+              + (activeKey === e.key ? ' is-active' : '');
+            return (
+              <button key={e.key} type="button" className={cls} aria-pressed={activeKey === e.key}
+                      onClick={() => toggle(e.key)}>
+                <span className="overlay-legend__swatch" style={{ background: e.color }} />
+                {e.label} <span className="dim">· floor {fmtNum(e.floor)}</span>
+              </button>
+            );
+          })}
         </div>
       )}
     </Card>
