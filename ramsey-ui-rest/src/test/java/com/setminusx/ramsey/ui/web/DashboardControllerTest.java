@@ -1,6 +1,7 @@
 package com.setminusx.ramsey.ui.web;
 
 import com.setminusx.ramsey.ui.client.MwClient;
+import com.setminusx.ramsey.ui.service.ProgressionCache;
 import com.setminusx.ramsey.ui.config.RamseyProperties;
 import com.setminusx.ramsey.ui.model.*;
 import com.setminusx.ramsey.ui.redis.RedisLiveStageService;
@@ -23,7 +24,9 @@ class DashboardControllerTest {
     private final RamseyProperties props = new RamseyProperties("http://mw:8080",
             new RamseyProperties.Sampler(1000), new RamseyProperties.Throughput(100, 7200));
     private final Clock clock = Clock.fixed(Instant.ofEpochMilli(2000), ZoneOffset.UTC);
-    private final DashboardController controller = new DashboardController(mw, live, buffer, props, clock);
+    private final ProgressionCache progressionCache = new ProgressionCache(mw);
+    private final DashboardController controller =
+            new DashboardController(mw, live, buffer, props, clock, progressionCache);
 
     @Test
     void campaigns_delegates_to_mw() {
@@ -36,7 +39,28 @@ class DashboardControllerTest {
     void progression_delegates_to_mw() {
         ProgressionPointDto p = new ProgressionPointDto(42, 1, 775623L, "ACTIVE", "x", null);
         when(mw.getProgression(10)).thenReturn(List.of(p));
-        assertThat(controller.progression(10)).containsExactly(p);
+        assertThat(controller.progression(10, null)).containsExactly(p);
+    }
+
+    /** The dashboard holds the history and polls only for the tail. */
+    @Test
+    void progression_sinceStageId_returnsOnlyNewerPoints() {
+        ProgressionPointDto older = new ProgressionPointDto(42, 1, 775623L, "INACTIVE", "x", null);
+        ProgressionPointDto newer = new ProgressionPointDto(43, 2, 775000L, "ACTIVE", "y", null);
+        when(mw.getProgression(10)).thenReturn(List.of(older, newer));
+        assertThat(controller.progression(10, 42)).containsExactly(newer);
+        assertThat(controller.progression(10, 43)).isEmpty();
+    }
+
+    /** Repeated polls during a fast descent must not re-query the middleware every time. */
+    @Test
+    void progression_isCachedAcrossCalls() {
+        ProgressionPointDto p = new ProgressionPointDto(42, 1, 775623L, "ACTIVE", "x", null);
+        when(mw.getProgression(10)).thenReturn(List.of(p));
+        for (int i = 0; i < 20; i++) {
+            controller.progression(10, 41);
+        }
+        verify(mw, times(1)).getProgression(10);
     }
 
     @Test

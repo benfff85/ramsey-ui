@@ -32,4 +32,17 @@ describe('ThroughputChart', () => {
   it('does not throw when empty', () => {
     expect(() => render(<ThroughputChart samples={[]} interval={5} />)).not.toThrow();
   });
+
+  it('renders axis ticks compactly so wide values are not clipped', () => {
+    // Throughput reached tens of millions after the kernel work; "46,153,846" overflows the
+    // 56px axis gutter and loses its leading digit, so ticks must be compact.
+    const now = Date.now();
+    const samples = [
+      { timestamp: now - 10_000, unitsPerSecond: 46_153_846, cliqueCount: 1, stageId: 1, campaignId: 10 },
+      { timestamp: now, unitsPerSecond: 47_000_000, cliqueCount: 1, stageId: 1, campaignId: 10 },
+    ] as unknown as Parameters<typeof ThroughputChart>[0]['samples'];
+    const { container } = render(<ThroughputChart samples={samples} interval={5} />);
+    const text = container.textContent ?? '';
+    expect(text).not.toMatch(/46,153,846/);
+  });
 });

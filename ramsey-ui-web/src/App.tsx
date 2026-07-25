@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from './api';
 import { Sidebar, type Interval } from './components/Sidebar';
 import { StatCards, sortCampaigns } from './components/StatCards';
@@ -38,11 +38,41 @@ export default function App() {
     }).catch(() => undefined);
   }, []);
 
-  // (Re)fetch progression on campaign change AND whenever the live stage advances, so the
-  // charts/raw data pick up new stages without a manual reload.
+  // Progression is append-only and unbounded — a long-running campaign is already tens of
+  // thousands of points and several megabytes. It has to stay current as stages advance, but a
+  // descent advances more than once a second, so refetching the whole series each time moved
+  // megabytes per second. Fetch it once per campaign, then only the tail.
+  const highestStageIdRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (selectedId == null) return;
-    api.getProgression(selectedId).then(setProgression).catch(() => undefined);
+    let alive = true;
+    highestStageIdRef.current = null;
+    setProgression([]);
+    api.getProgression(selectedId).then((points) => {
+      if (!alive) return;
+      setProgression(points);
+      highestStageIdRef.current = points.reduce((m, p) => Math.max(m, p.stageId), 0) || null;
+    }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [selectedId]);
+
+  useEffect(() => {
+    const since = highestStageIdRef.current;
+    if (selectedId == null || liveStageId == null || since == null) return;
+    let alive = true;
+    api.getProgression(selectedId, since).then((points) => {
+      if (!alive || !points.length) return;
+      highestStageIdRef.current = points.reduce((m, p) => Math.max(m, p.stageId), since);
+      // Dedupe by stage: two advances in quick succession can leave overlapping deltas in flight,
+      // since the cursor only moves when a response lands.
+      setProgression((prev) => {
+        const seen = new Set(prev.map((p) => p.stageId));
+        const fresh = points.filter((p) => !seen.has(p.stageId));
+        return fresh.length ? [...prev, ...fresh] : prev;
+      });
+    }).catch(() => undefined);
+    return () => { alive = false; };
   }, [selectedId, liveStageId]);
 
   // Best-results for the live stage; polled and re-keyed when the stage changes.
