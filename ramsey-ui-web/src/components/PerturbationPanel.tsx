@@ -1,5 +1,5 @@
 import type { ProgressionPointDto } from '../types';
-import { analyzeIls, WALL_STAGES, BASE_EDGE_PAIRS } from '../ils';
+import { analyzeIls, BASIN_STALE_STAGES, BASE_EDGE_PAIRS } from '../ils';
 import { Card } from './Card';
 
 const fmt = (n: number) => n.toLocaleString('en-US');
@@ -14,8 +14,8 @@ export function PerturbationPanel({ progression }: { progression: ProgressionPoi
   const ils = analyzeIls(progression);
   if (!ils) return null;
 
-  const { kickCount, incumbent, basinFloor, nextKickIn, stagesSinceKick, nextMultiplier, etaHours } = ils;
-  const pct = Math.min(100, (stagesSinceKick / WALL_STAGES) * 100);
+  const { kickCount, incumbent, basinFloor, nextKickIn, stagesSinceBasinMin, nextMultiplier, etaHours } = ils;
+  const pct = Math.min(100, (stagesSinceBasinMin / BASIN_STALE_STAGES) * 100);
   const floorDelta = basinFloor != null ? basinFloor - incumbent : null;
   const flips = BASE_EDGE_PAIRS * nextMultiplier;
   const eta = etaHours == null ? null
@@ -53,7 +53,7 @@ export function PerturbationPanel({ progression }: { progression: ProgressionPoi
         <div className="ils__next">
           <div className="ils__nextlabel">
             <span>next kick in <strong>{fmt(nextKickIn)}</strong> stages{eta ? ` · ${eta}` : ''}</span>
-            <span className="ils__muted">{fmt(stagesSinceKick)} / {fmt(WALL_STAGES)} stages since kick</span>
+            <span className="ils__muted">{fmt(stagesSinceBasinMin)} / {fmt(BASIN_STALE_STAGES)} stages since basin floor</span>
           </div>
           <div className="ils__bar"><div className="ils__barfill" style={{ width: `${pct}%` }} /></div>
         </div>

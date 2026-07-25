@@ -4,7 +4,7 @@ import type { ProgressionPointDto } from './types';
 // (PERTURBATION_WALL_STAGES / _EDGE_PAIRS / _ESCALATION_CAP). The whole ILS state is
 // derived client-side from the progression series, so the dashboard needs no extra
 // backend endpoint. If those env values change in the QM, update these to match.
-export const WALL_STAGES = 500;
+export const BASIN_STALE_STAGES = 100;
 export const BASE_EDGE_PAIRS = 60;
 export const ESCALATION_CAP = 32; // geometric: multipliers 1,2,4,8,16,32
 
@@ -16,6 +16,7 @@ export interface IlsState {
   stagesSinceKick: number;   // stages advanced since the last kick
   nextKickIn: number;        // stages until the next kick can fire (0 = due now)
   basinFloor: number | null; // best (min) count reached in the current post-kick basin
+  stagesSinceBasinMin: number; // stages since that floor was last beaten — the QM's kick clock
   nextMultiplier: number;    // escalation strength the NEXT kick will use (x1..cap)
   etaHours: number | null;   // rough ETA to next kick from the recent near-floor stage rate
 }
@@ -43,12 +44,22 @@ export function analyzeIls(progression: ProgressionPointDto[]): IlsState | null 
 
   const lastKickStageId = kickStageIds[kickCount - 1];
   const stagesSinceKick = sorted.filter((p) => p.stageId > lastKickStageId).length;
-  const nextKickIn = Math.max(0, WALL_STAGES - stagesSinceKick);
 
   // Current basin floor: best (min) count reached since the last kick. The kick spike is the
   // MAX of this window, so it never affects the min — no need to filter it out.
   const postKick = sorted.filter((p) => p.stageId >= lastKickStageId);
   const basinFloor = postKick.length ? Math.min(...postKick.map((p) => p.cliqueCount)) : null;
+
+  // The QM's kick clock runs from the stage that set the basin FLOOR, not from the kick, so a
+  // descent that is still finding new minima is never interrupted however long it takes. `sorted`
+  // is ascending by stageId, so find() picks the earliest tie — matching the QM's tie-break.
+  const basinMinStageId = basinFloor == null
+    ? null
+    : postKick.find((p) => p.cliqueCount === basinFloor)!.stageId;
+  const stagesSinceBasinMin = basinMinStageId == null
+    ? 0
+    : sorted.filter((p) => p.stageId > basinMinStageId).length;
+  const nextKickIn = Math.max(0, BASIN_STALE_STAGES - stagesSinceBasinMin);
 
   // Escalation mirrors the QM: a kick that fails to set a NEW global min escalates strength.
   // The incumbent IS the global min; kicks that happened after it was already set never beat
@@ -72,7 +83,7 @@ export function analyzeIls(progression: ProgressionPointDto[]): IlsState | null 
   }
 
   return { incumbent, kickStageIds, kickCount, lastKickStageId, stagesSinceKick,
-    nextKickIn, basinFloor, nextMultiplier, etaHours };
+    nextKickIn, basinFloor, stagesSinceBasinMin, nextMultiplier, etaHours };
 }
 
 // Categorical colors for the per-kick series (mirror theme.css --series-*), cycled.

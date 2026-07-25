@@ -32,8 +32,23 @@ describe('analyzeIls', () => {
     expect(ils.incumbent).toBe(25840);
     expect(ils.lastKickStageId).toBe(10);
     expect(ils.stagesSinceKick).toBe(4); // stages 11..14
-    expect(ils.nextKickIn).toBe(496);    // 500 - 4
     expect(ils.basinFloor).toBe(26023);  // best since the kick (spike is the max, ignored)
+    // Still descending — the floor was set on the LAST stage, so the stale clock is at 0
+    // and the full window remains. A descent in free fall is never kicked.
+    expect(ils.stagesSinceBasinMin).toBe(0);
+    expect(ils.nextKickIn).toBe(100);
+  });
+
+  it('counts staleness from the basin floor, not from the kick', () => {
+    // Floor 26050 set at stage 11, then 30 flat stages: the clock reads 30, not the 31
+    // stages elapsed since the kick. Mirrors the QM's basin-staleness gate.
+    const prog = [pt(1, 25840), kick(10, 72000)];
+    for (let s = 11; s <= 41; s++) prog.push(pt(s, s === 11 ? 26050 : 26060));
+    const ils = analyzeIls(prog)!;
+    expect(ils.basinFloor).toBe(26050);
+    expect(ils.stagesSinceKick).toBe(31);
+    expect(ils.stagesSinceBasinMin).toBe(30);
+    expect(ils.nextKickIn).toBe(70); // 100 - 30
   });
 
   it('escalates the next-kick multiplier for a fruitless kick', () => {
@@ -70,7 +85,7 @@ describe('analyzeIls', () => {
   });
 
   it('estimates ETA from the recent near-floor stage rate', () => {
-    // 3 near-floor stages 60s apart -> 60s/stage; 498 stages left -> 8.3h
+    // 3 near-floor stages 60s apart -> 60s/stage; 100 stages left -> 1.7h
     const prog = [
       pt(1, 25840),
       kick(10, 72000, '2026-07-19T01:00:00Z'),
@@ -78,8 +93,8 @@ describe('analyzeIls', () => {
       pt(12, 26040, '2026-07-19T01:02:00Z'),
     ];
     const ils = analyzeIls(prog)!;
-    expect(ils.nextKickIn).toBe(498);
-    expect(ils.etaHours).toBeCloseTo(498 * 60 / 3600, 1);
+    expect(ils.nextKickIn).toBe(100);
+    expect(ils.etaHours).toBeCloseTo(100 * 60 / 3600, 1);
   });
 });
 
