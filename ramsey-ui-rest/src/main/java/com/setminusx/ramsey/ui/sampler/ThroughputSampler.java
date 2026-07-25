@@ -20,6 +20,10 @@ public class ThroughputSampler {
 
     private static final Logger log = LoggerFactory.getLogger(ThroughputSampler.class);
 
+    /**
+     * Previous reading for a campaign. `count` is the campaign-scoped running total, so it
+     * survives stage advances; `stageId` is retained only for the legacy per-stage fallback.
+     */
     private record Baseline(int stageId, long count, long ts) {}
 
     private final ActiveStageResolver resolver;
@@ -78,15 +82,28 @@ public class ThroughputSampler {
     private void sampleCampaign(long now, ActiveStage active) {
         int campaignId = active.campaignId();
         int stageId = active.stageId();
-        long count = redis.getProcessedCount(stageId);
+
+        // Difference the CAMPAIGN total, not the per-stage counter. The per-stage counter is
+        // deleted when a stage advances, so differencing it forced a re-baseline (a 0.0 reading)
+        // on every turnover. That was fine when stages lasted minutes, but near the floor they
+        // now advance faster than this sampler ticks, so almost every reading was 0 and fleet
+        // throughput appeared an order of magnitude below reality.
+        long total = redis.getProcessedTotal(campaignId);
+        boolean haveTotal = total > 0;
+        long count = haveTotal ? total : redis.getProcessedCount(stageId);
 
         Baseline base = last.get(campaignId);
         double unitsPerSec;
-        if (base == null || base.stageId() != stageId) {
-            unitsPerSec = 0.0; // re-baseline on first sample / stage change (no cross-stage spike)
+        // Without the campaign total (workers not yet carrying it) fall back to the old per-stage
+        // behaviour, which still needs its re-baseline on a stage change.
+        boolean mustRebaseline = base == null || (!haveTotal && base.stageId() != stageId);
+        if (mustRebaseline) {
+            unitsPerSec = 0.0;
         } else {
             double elapsedSec = (now - base.ts()) / 1000.0;
             double delta = count - base.count();
+            // A negative delta means the counter restarted (Redis flush, or the fallback switching
+            // stages); treat it as a re-baseline rather than a spike.
             unitsPerSec = (elapsedSec > 0 && delta > 0) ? delta / elapsedSec : 0.0;
         }
         last.put(campaignId, new Baseline(stageId, count, now));
