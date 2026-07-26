@@ -311,22 +311,76 @@ td.num, th.num { font-family: var(--font-mono); }
   .status__dot--ok, .live-badge__dot { animation: none; }
 }
 
-/* ---------- cross-campaign overlay ---------- */
-.overlay-caption { color: var(--muted); font-size: 11px; font-family: var(--font-mono); }
-
+/* ---------- multi-series legend (per-kick epochs) ---------- */
 .overlay-legend {
   display: flex; flex-wrap: wrap; gap: 6px 18px;
   margin-top: 10px; font-family: var(--font-mono); font-size: 12px; color: var(--text);
 }
 .overlay-legend__item { display: inline-flex; align-items: center; gap: 7px; }
-.overlay-legend__swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
-.overlay-legend__live {
-  color: var(--accent); border: 1px solid var(--accent-dim); border-radius: 4px;
-  padding: 0 5px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+.overlay-legend__swatch { width: 14px; height: 3px; border-radius: 2px; display: inline-block; flex: none; }
+
+/* Clickable legend entries: click to isolate a series (dim the rest). */
+.overlay-legend__item--btn {
+  background: none; border: none; margin: 0; padding: 3px 6px; border-radius: 6px;
+  font: inherit; color: inherit; cursor: pointer;
+  transition: opacity 120ms ease, background 120ms ease;
+}
+.overlay-legend__item--btn:hover { background: rgba(255, 255, 255, 0.05); }
+.overlay-legend__item--btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.overlay-legend__item.is-dim { opacity: 0.4; }
+.overlay-legend__item.is-active { background: rgba(255, 255, 255, 0.07); font-weight: 600; }
+.overlay-legend .dim { color: var(--faint); }
+
+/* ---------- fleet panel ---------- */
+.fleets { display: flex; flex-direction: column; gap: 8px; }
+.fleet-row {
+  display: grid; grid-template-columns: 1fr 1fr auto; align-items: center; gap: 12px;
+  font-family: var(--font-mono); font-size: 13px;
+  padding: 8px 10px; border: 1px solid var(--border-soft); border-radius: 9px; background: var(--panel-2);
+}
+.fleet-row__platform { color: var(--text); font-weight: 600; }
+.fleet-row__target { color: var(--muted); }
+.fleet-row__state {
+  font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase;
+  padding: 2px 8px; border-radius: 5px; justify-self: end;
+}
+.fleet-row__state--running { color: var(--green); border: 1px solid var(--green); }
+.fleet-row__state--paused  { color: var(--red);   border: 1px solid var(--red); }
+.fleet-row__state--idle    { color: var(--faint); border: 1px solid var(--border); }
+
+.chart-note { font-family: var(--font-mono); font-size: 11px; color: var(--faint); }
+
+/* ---------- perturbation (ILS) panel ---------- */
+.ils { display: flex; flex-direction: column; gap: 16px; }
+.ils__stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+}
+.ils__stat {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px; border: 1px solid var(--border-soft); border-radius: 9px; background: var(--panel-2);
+}
+.ils__k {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted);
+}
+.ils__v { font-family: var(--font-mono); font-size: 18px; font-weight: 600; color: var(--text); }
+.ils__delta { font-size: 11px; font-weight: 500; margin-left: 8px; }
+.ils__delta--good { color: var(--green); }
+.ils__delta--over { color: var(--muted); }
+
+.ils__next { display: flex; flex-direction: column; gap: 7px; }
+.ils__nextlabel {
+  display: flex; justify-content: space-between; align-items: baseline;
+  font-family: var(--font-mono); font-size: 12.5px; color: var(--text);
+}
+.ils__nextlabel strong { color: var(--accent); }
+.ils__muted { color: var(--faint); font-size: 11px; }
+.ils__bar {
+  height: 7px; border-radius: 4px; background: var(--panel-2);
+  border: 1px solid var(--border-soft); overflow: hidden;
+}
+.ils__barfill {
+  height: 100%; background: var(--accent); box-shadow: var(--glow);
+  transition: width 400ms ease;
 }
 
-.overlay-tip {
-  background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
-  padding: 8px 10px; font-family: var(--font-mono); font-size: 12px;
-}
-.overlay-tip__label { color: var(--muted); margin-bottom: 4px; }
+@media (max-width: 1080px) { .ils__stats { grid-template-columns: repeat(2, 1fr); } }

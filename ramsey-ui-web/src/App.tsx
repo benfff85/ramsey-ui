@@ -1,11 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+/**
+ * Points to request for the progression charts. The full series is unbounded — it passed 80,000
+ * points and 11 MB, which a phone cannot parse — and a chart a few hundred pixels wide cannot
+ * show more than this anyway. The server samples structurally (kicks and epoch floors always
+ * survive) and stamps each point's true position, so the axis and the ILS stage counts stay exact.
+ */
+const MAX_PROGRESSION_POINTS = 3000;
 import { api } from './api';
 import { Sidebar, type Interval } from './components/Sidebar';
 import { StatCards, sortCampaigns } from './components/StatCards';
 import { ThroughputChart } from './components/ThroughputChart';
 import { CliqueProgressionChart } from './components/CliqueProgressionChart';
-import { CampaignOverlayChart } from './components/CampaignOverlayChart';
-import { ImprovementChart } from './components/ImprovementChart';
+import { FleetPanel } from './components/FleetPanel';
+import { PerturbationPanel } from './components/PerturbationPanel';
 import { BestResultsTable } from './components/BestResultsTable';
 import { RawDataTable } from './components/RawDataTable';
 import { useThroughputSocket } from './useThroughputSocket';
@@ -37,11 +45,41 @@ export default function App() {
     }).catch(() => undefined);
   }, []);
 
-  // (Re)fetch progression on campaign change AND whenever the live stage advances, so the
-  // charts/raw data pick up new stages without a manual reload.
+  // Progression is append-only and unbounded — a long-running campaign is already tens of
+  // thousands of points and several megabytes. It has to stay current as stages advance, but a
+  // descent advances more than once a second, so refetching the whole series each time moved
+  // megabytes per second. Fetch it once per campaign, then only the tail.
+  const highestStageIdRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (selectedId == null) return;
-    api.getProgression(selectedId).then(setProgression).catch(() => undefined);
+    let alive = true;
+    highestStageIdRef.current = null;
+    setProgression([]);
+    api.getProgression(selectedId, undefined, MAX_PROGRESSION_POINTS).then((points) => {
+      if (!alive) return;
+      setProgression(points);
+      highestStageIdRef.current = points.reduce((m, p) => Math.max(m, p.stageId), 0) || null;
+    }).catch(() => undefined);
+    return () => { alive = false; };
+  }, [selectedId]);
+
+  useEffect(() => {
+    const since = highestStageIdRef.current;
+    if (selectedId == null || liveStageId == null || since == null) return;
+    let alive = true;
+    api.getProgression(selectedId, since).then((points) => {
+      if (!alive || !points.length) return;
+      highestStageIdRef.current = points.reduce((m, p) => Math.max(m, p.stageId), since);
+      // Dedupe by stage: two advances in quick succession can leave overlapping deltas in flight,
+      // since the cursor only moves when a response lands.
+      setProgression((prev) => {
+        const seen = new Set(prev.map((p) => p.stageId));
+        const fresh = points.filter((p) => !seen.has(p.stageId));
+        return fresh.length ? [...prev, ...fresh] : prev;
+      });
+    }).catch(() => undefined);
+    return () => { alive = false; };
   }, [selectedId, liveStageId]);
 
   // Best-results for the live stage; polled and re-keyed when the stage changes.
@@ -81,14 +119,14 @@ export default function App() {
       <main className="main">
         <StatCards stageId={stageId} cliqueCount={cliqueCount} minCliqueCount={minCliqueCount} firstCliqueCount={firstCliqueCount}
                    progressPct={progressPct} workIndex={workIndex} totalPairs={totalPairs} />
+        <FleetPanel />
         <ThroughputChart samples={samples} interval={interval} />
+        {progression.length > 0 && <PerturbationPanel progression={progression} />}
         {progression.length > 0 && (
           <div className="grid-2">
             <CliqueProgressionChart progression={progression} />
-            <ImprovementChart progression={progression} />
           </div>
         )}
-        <CampaignOverlayChart campaigns={campaigns} />
         {progression.length > 0 && (
           <>
             <BestResultsTable bestResults={bestResults} currentClique={cliqueCount ?? 0} />

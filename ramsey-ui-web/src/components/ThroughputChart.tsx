@@ -9,6 +9,18 @@ import { Card } from './Card';
 
 const fmtTime = (t: number) => new Date(t).toLocaleTimeString('en-US', { hour12: false });
 const fmtNum = (n: number) => Math.round(n).toLocaleString('en-US');
+/**
+ * Axis ticks in compact form. Throughput reaches tens of millions of units/sec, and a grouped
+ * number that wide ("46,153,846") overflows the axis gutter and gets its leading digit clipped.
+ * The headline and tooltip keep the exact value.
+ */
+const fmtAxis = (n: number) => {
+  const v = Math.round(n);
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(v >= 10_000_000 ? 0 : 1)}M`;
+  if (v >= 10_000) return `${Math.round(v / 1_000)}k`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(1)}k`;
+  return String(v);
+};
 
 export function ThroughputChart({ samples, interval }: { samples: ThroughputSample[]; interval: Interval }) {
   const data = useMemo(() => bucketSamples(samples, interval), [samples, interval]);
@@ -33,7 +45,7 @@ export function ThroughputChart({ samples, interval }: { samples: ThroughputSamp
           <CartesianGrid stroke="var(--border-soft)" vertical={false} />
           <XAxis dataKey="t" tickFormatter={fmtTime} stroke="var(--faint)" tickLine={false}
                  minTickGap={56} fontSize={11} />
-          <YAxis tickFormatter={fmtNum} stroke="var(--faint)" tickLine={false} axisLine={false}
+          <YAxis tickFormatter={fmtAxis} stroke="var(--faint)" tickLine={false} axisLine={false}
                  width={56} fontSize={11} />
           <Tooltip
             contentStyle={{ background: 'var(--panel-2)', border: '1px solid var(--border)',

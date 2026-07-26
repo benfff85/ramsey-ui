@@ -19,7 +19,7 @@ class ActiveStageResolverTest {
         return new CampaignDto(id, 8, 281, 600L, "S", status, "2026-06-14T10:00:00", "2026-06-16T12:00:00");
     }
     private ProgressionPointDto stage(int id, long clique, String status) {
-        return new ProgressionPointDto(id, 1, clique, status, "2026-06-16T12:00:00");
+        return new ProgressionPointDto(id, 1, clique, status, "2026-06-16T12:00:00", null, null);
     }
 
     @Test

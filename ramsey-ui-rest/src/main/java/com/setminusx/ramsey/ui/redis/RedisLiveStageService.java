@@ -27,6 +27,11 @@ public class RedisLiveStageService {
         return parseLong(redis.opsForValue().get(StageKeys.PROCESSED_COUNT + stageId));
     }
 
+    /** Campaign-scoped running total of units processed; never reset by a stage advance. */
+    public long getProcessedTotal(int campaignId) {
+        return parseLong(redis.opsForValue().get(StageKeys.PROCESSED_TOTAL + campaignId));
+    }
+
     public long getWorkIndex(int stageId) {
         return parseLong(redis.opsForValue().get(StageKeys.WORK_INDEX + stageId));
     }

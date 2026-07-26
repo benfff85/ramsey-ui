@@ -179,4 +179,58 @@ class ThroughputSamplerTest {
     private static org.assertj.core.groups.Tuple tuple(Object... values) {
         return org.assertj.core.groups.Tuple.tuple(values);
     }
+
+    // ---------- campaign-scoped counter (survives stage advances) ----------
+
+    /**
+     * The regression this counter exists for: near the floor a stage advances faster than the
+     * sampler ticks, and the per-stage counter is deleted on advance. Differencing it forced a
+     * 0.0 reading on every turnover, so fleet throughput read an order of magnitude low.
+     */
+    @Test
+    void throughput_survives_a_stage_advance() {
+        when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(2, 42, 775623L)));
+        when(redis.getProcessedTotal(2)).thenReturn(1_000_000L);
+        sampler.sample(); // baseline
+
+        // Stage advanced: new stage id, and its per-stage counter restarted from near zero.
+        clock.advanceMillis(1000);
+        when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(2, 43, 775000L)));
+        when(redis.getProcessedTotal(2)).thenReturn(1_500_000L);
+        sampler.sample();
+
+        assertThat(buffer.snapshot()).extracting(ThroughputSample::unitsPerSec)
+                .containsExactly(0.0, 500_000.0);
+    }
+
+    /** Without the campaign total (older workers) the per-stage behaviour still applies. */
+    @Test
+    void fallsBackToPerStageCounterWhenCampaignTotalAbsent() {
+        when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(2, 42, 775623L)));
+        when(redis.getProcessedTotal(2)).thenReturn(0L);
+        when(redis.getProcessedCount(42)).thenReturn(1000L);
+        sampler.sample();
+
+        clock.advanceMillis(1000);
+        when(redis.getProcessedCount(42)).thenReturn(1400L);
+        sampler.sample();
+
+        assertThat(buffer.snapshot()).extracting(ThroughputSample::unitsPerSec)
+                .containsExactly(0.0, 400.0);
+    }
+
+    /** A counter that goes backwards (Redis flush) must re-baseline, not emit a negative spike. */
+    @Test
+    void counterGoingBackwardsDoesNotProduceASpike() {
+        when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(2, 42, 775623L)));
+        when(redis.getProcessedTotal(2)).thenReturn(5_000_000L);
+        sampler.sample();
+
+        clock.advanceMillis(1000);
+        when(redis.getProcessedTotal(2)).thenReturn(120L); // wiped and restarted
+        sampler.sample();
+
+        assertThat(buffer.snapshot()).extracting(ThroughputSample::unitsPerSec)
+                .containsExactly(0.0, 0.0);
+    }
 }
