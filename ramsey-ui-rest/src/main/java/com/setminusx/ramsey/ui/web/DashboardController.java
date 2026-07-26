@@ -51,10 +51,14 @@ public class DashboardController {
      */
     @GetMapping("/campaigns/{id}/progression")
     public List<ProgressionPointDto> progression(@PathVariable int id,
-                                                 @RequestParam(required = false) Integer sinceStageId) {
-        return sinceStageId == null
+                                                 @RequestParam(required = false) Integer sinceStageId,
+                                                 @RequestParam(required = false) Integer maxPoints) {
+        if (sinceStageId != null) {
+            return progressionCache.since(id, sinceStageId);
+        }
+        return maxPoints == null
                 ? progressionCache.get(id)
-                : progressionCache.since(id, sinceStageId);
+                : progressionCache.sampled(id, maxPoints);
     }
 
     @GetMapping("/stages/{id}/live")

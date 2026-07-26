@@ -82,7 +82,7 @@ export function CliqueProgressionChart({ progression }: { progression: Progressi
             return (
               <Line key={e.key} type="monotone" dataKey={e.key} stroke={e.color}
                     strokeWidth={isActive ? 2.75 : 1.5} strokeOpacity={dim ? 0.12 : 1}
-                    dot={false} isAnimationActive={false} connectNulls={false} name={e.label} />
+                    dot={false} isAnimationActive={false} connectNulls name={e.label} />
             );
           })}
         </LineChart>

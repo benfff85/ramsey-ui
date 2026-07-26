@@ -43,7 +43,17 @@ export function analyzeIls(progression: ProgressionPointDto[]): IlsState | null 
   if (kickCount === 0) return null;
 
   const lastKickStageId = kickStageIds[kickCount - 1];
-  const stagesSinceKick = sorted.filter((p) => p.stageId > lastKickStageId).length;
+  // Stage counts come from the points' position in the FULL series, not from how many points we
+  // were sent — the payload may be a sample, and counting rows would badly under-report. Falls
+  // back to counting when idx is absent.
+  const lastIdx = sorted[sorted.length - 1].idx;
+  const stagesFrom = (stageId: number) => {
+    const at = sorted.find((p) => p.stageId === stageId);
+    return at?.idx != null && lastIdx != null
+      ? lastIdx - at.idx
+      : sorted.filter((p) => p.stageId > stageId).length;
+  };
+  const stagesSinceKick = stagesFrom(lastKickStageId);
 
   // Current basin floor: best (min) count reached since the last kick. The kick spike is the
   // MAX of this window, so it never affects the min — no need to filter it out.
@@ -56,9 +66,7 @@ export function analyzeIls(progression: ProgressionPointDto[]): IlsState | null 
   const basinMinStageId = basinFloor == null
     ? null
     : postKick.find((p) => p.cliqueCount === basinFloor)!.stageId;
-  const stagesSinceBasinMin = basinMinStageId == null
-    ? 0
-    : sorted.filter((p) => p.stageId > basinMinStageId).length;
+  const stagesSinceBasinMin = basinMinStageId == null ? 0 : stagesFrom(basinMinStageId);
   const nextKickIn = Math.max(0, BASIN_STALE_STAGES - stagesSinceBasinMin);
 
   // Escalation mirrors the QM: a kick that fails to set a NEW global min escalates strength.
@@ -120,29 +128,40 @@ export function epochSeries(progression: ProgressionPointDto[]): EpochSeries | n
   const epochOf = (stageId: number) => kicks.filter((k) => k <= stageId).length;
   const nEpochs = kicks.length + 1;
 
-  // Bucket points per epoch, preserving stage order; the index within a bucket is x.
-  const buckets: number[][] = Array.from({ length: nEpochs }, () => []);
-  for (const p of sorted) buckets[epochOf(p.stageId)].push(p.cliqueCount);
+  // Bucket points per epoch. x is "stages since this epoch began", taken from the point's
+  // position in the FULL series (`idx`) rather than its position in the array we received —
+  // the server may have sent a sample, and array position would compress the axis. Falls back to
+  // array position when idx is absent (full, unsampled payload).
+  const buckets: Array<Array<{ x: number; v: number }>> = Array.from({ length: nEpochs }, () => []);
+  const epochStart: number[] = Array.from({ length: nEpochs }, () => -1);
+  sorted.forEach((p, i) => {
+    const e = epochOf(p.stageId);
+    const pos = p.idx ?? i;
+    if (epochStart[e] < 0) epochStart[e] = pos;
+    buckets[e].push({ x: pos - epochStart[e], v: p.cliqueCount });
+  });
 
-  const maxLen = Math.max(...buckets.map((b) => b.length));
-  const data: Array<Record<string, number>> = [];
-  for (let x = 0; x < maxLen; x++) {
+  // One row per distinct x across all epochs; series with no point at an x simply omit the key.
+  const xs = [...new Set(buckets.flatMap((b) => b.map((d) => d.x)))].sort((a, b) => a - b);
+  const byEpoch = buckets.map((b) => new Map(b.map((d) => [d.x, d.v])));
+  const data: Array<Record<string, number>> = xs.map((x) => {
     const row: Record<string, number> = { x };
-    buckets.forEach((b, e) => { if (x < b.length) row[`e${e}`] = b[x]; });
-    data.push(row);
-  }
+    byEpoch.forEach((m, e) => { const v = m.get(x); if (v != null) row[`e${e}`] = v; });
+    return row;
+  });
 
   const epochs: EpochMeta[] = buckets.map((b, e) => ({
     key: `e${e}`,
     label: e === 0 ? 'initial' : `kick ${e}`,
-    floor: Math.min(...b),
+    floor: Math.min(...b.map((d) => d.v)),
     color: SERIES_COLORS[e % SERIES_COLORS.length],
   }));
 
   // Cap x to the kick-descent timescale so young kicks aren't squished by the long
   // initial epoch (min 300 keeps the initial descent to the floor visible).
-  const kickLens = buckets.slice(1).map((b) => b.length);
-  const xMax = kickLens.length ? Math.max(300, ...kickLens) : maxLen;
+  const span = (b: Array<{ x: number }>) => (b.length ? b[b.length - 1].x + 1 : 0);
+  const kickSpans = buckets.slice(1).map(span);
+  const xMax = kickSpans.length ? Math.max(300, ...kickSpans) : Math.max(1, ...buckets.map(span));
 
   return { epochs, data, xMax };
 }

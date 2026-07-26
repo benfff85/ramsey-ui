@@ -1,4 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
+
+/**
+ * Points to request for the progression charts. The full series is unbounded — it passed 80,000
+ * points and 11 MB, which a phone cannot parse — and a chart a few hundred pixels wide cannot
+ * show more than this anyway. The server samples structurally (kicks and epoch floors always
+ * survive) and stamps each point's true position, so the axis and the ILS stage counts stay exact.
+ */
+const MAX_PROGRESSION_POINTS = 3000;
 import { api } from './api';
 import { Sidebar, type Interval } from './components/Sidebar';
 import { StatCards, sortCampaigns } from './components/StatCards';
@@ -6,7 +14,6 @@ import { ThroughputChart } from './components/ThroughputChart';
 import { CliqueProgressionChart } from './components/CliqueProgressionChart';
 import { FleetPanel } from './components/FleetPanel';
 import { PerturbationPanel } from './components/PerturbationPanel';
-import { ImprovementChart } from './components/ImprovementChart';
 import { BestResultsTable } from './components/BestResultsTable';
 import { RawDataTable } from './components/RawDataTable';
 import { useThroughputSocket } from './useThroughputSocket';
@@ -49,7 +56,7 @@ export default function App() {
     let alive = true;
     highestStageIdRef.current = null;
     setProgression([]);
-    api.getProgression(selectedId).then((points) => {
+    api.getProgression(selectedId, undefined, MAX_PROGRESSION_POINTS).then((points) => {
       if (!alive) return;
       setProgression(points);
       highestStageIdRef.current = points.reduce((m, p) => Math.max(m, p.stageId), 0) || null;
@@ -118,7 +125,6 @@ export default function App() {
         {progression.length > 0 && (
           <div className="grid-2">
             <CliqueProgressionChart progression={progression} />
-            <ImprovementChart progression={progression} />
           </div>
         )}
         {progression.length > 0 && (

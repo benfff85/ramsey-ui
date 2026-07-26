@@ -37,28 +37,30 @@ class DashboardControllerTest {
 
     @Test
     void progression_delegates_to_mw() {
-        ProgressionPointDto p = new ProgressionPointDto(42, 1, 775623L, "ACTIVE", "x", null);
+        ProgressionPointDto p = new ProgressionPointDto(42, 1, 775623L, "ACTIVE", "x", null, null);
         when(mw.getProgression(10)).thenReturn(List.of(p));
-        assertThat(controller.progression(10, null)).containsExactly(p);
+        assertThat(controller.progression(10, null, null))
+                .extracting(ProgressionPointDto::stageId).containsExactly(42);
     }
 
     /** The dashboard holds the history and polls only for the tail. */
     @Test
     void progression_sinceStageId_returnsOnlyNewerPoints() {
-        ProgressionPointDto older = new ProgressionPointDto(42, 1, 775623L, "INACTIVE", "x", null);
-        ProgressionPointDto newer = new ProgressionPointDto(43, 2, 775000L, "ACTIVE", "y", null);
+        ProgressionPointDto older = new ProgressionPointDto(42, 1, 775623L, "INACTIVE", "x", null, null);
+        ProgressionPointDto newer = new ProgressionPointDto(43, 2, 775000L, "ACTIVE", "y", null, null);
         when(mw.getProgression(10)).thenReturn(List.of(older, newer));
-        assertThat(controller.progression(10, 42)).containsExactly(newer);
-        assertThat(controller.progression(10, 43)).isEmpty();
+        assertThat(controller.progression(10, 42, null))
+                .extracting(ProgressionPointDto::stageId).containsExactly(43);
+        assertThat(controller.progression(10, 43, null)).isEmpty();
     }
 
     /** Repeated polls during a fast descent must not re-query the middleware every time. */
     @Test
     void progression_isCachedAcrossCalls() {
-        ProgressionPointDto p = new ProgressionPointDto(42, 1, 775623L, "ACTIVE", "x", null);
+        ProgressionPointDto p = new ProgressionPointDto(42, 1, 775623L, "ACTIVE", "x", null, null);
         when(mw.getProgression(10)).thenReturn(List.of(p));
         for (int i = 0; i < 20; i++) {
-            controller.progression(10, 41);
+            controller.progression(10, 41, null);
         }
         verify(mw, times(1)).getProgression(10);
     }
@@ -91,5 +93,62 @@ class DashboardControllerTest {
                 .containsExactly(7.0, 9.0);
         assertThat(controller.history(null, 10)).hasSize(1);
         assertThat(controller.history(null, null)).hasSize(3);
+    }
+
+    // ---------- downsampling for clients that cannot take the whole series ----------
+
+    private ProgressionPointDto pt(int stageId, long clique, String details) {
+        return new ProgressionPointDto(stageId, stageId, clique, "INACTIVE", "t", details, null);
+    }
+
+    /**
+     * A plain stride would be wrong: the chart derives its epochs from kick markers and its legend
+     * floors from each epoch's minimum, so those points must survive sampling or the dashboard
+     * reports different numbers, not just a coarser line.
+     */
+    @Test
+    void sampling_keepsKickMarkersAndEpochFloors() {
+        List<ProgressionPointDto> series = new java.util.ArrayList<>();
+        for (int i = 1; i <= 400; i++) {
+            String details = (i == 100 || i == 250) ? "PERTURBATION kick from graph 1 (5)" : null;
+            long clique = 900_000L - i;          // gently descending
+            if (i == 60) clique = 1L;            // epoch-0 floor
+            if (i == 180) clique = 2L;           // epoch-1 floor
+            if (i == 300) clique = 3L;           // epoch-2 floor
+            series.add(pt(i, clique, details));
+        }
+        when(mw.getProgression(7)).thenReturn(series);
+
+        List<ProgressionPointDto> out = controller.progression(7, null, 50);
+
+        assertThat(out).hasSizeLessThanOrEqualTo(50);
+        assertThat(out).extracting(ProgressionPointDto::stageId)
+                .contains(100, 250)             // both kicks
+                .contains(60, 180, 300)         // all three epoch floors
+                .contains(1, 400);              // endpoints
+    }
+
+    /** idx is assigned before sampling, so the chart's x-axis still reads in real stages. */
+    @Test
+    void sampling_preservesTrueSeriesPosition() {
+        List<ProgressionPointDto> series = new java.util.ArrayList<>();
+        for (int i = 0; i < 300; i++) series.add(pt(i + 1, 500L + i, null));
+        when(mw.getProgression(7)).thenReturn(series);
+
+        List<ProgressionPointDto> out = controller.progression(7, null, 30);
+
+        assertThat(out).hasSizeLessThanOrEqualTo(30);
+        // Every surviving point's idx equals its position in the FULL series (stageId - 1 here).
+        assertThat(out).allSatisfy(p -> assertThat(p.idx()).isEqualTo(p.stageId() - 1));
+        assertThat(out.get(out.size() - 1).idx()).isEqualTo(299);
+    }
+
+    /** A series already under the cap must come back untouched. */
+    @Test
+    void sampling_isANoOpBelowTheCap() {
+        List<ProgressionPointDto> series = List.of(pt(1, 10L, null), pt(2, 9L, null));
+        when(mw.getProgression(7)).thenReturn(series);
+        assertThat(controller.progression(7, null, 500))
+                .extracting(ProgressionPointDto::stageId).containsExactly(1, 2);
     }
 }

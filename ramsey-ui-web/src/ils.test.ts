@@ -123,4 +123,33 @@ describe('epochSeries', () => {
     expect(s.epochs[0].color).not.toEqual(s.epochs[1].color);
     expect(s.xMax).toBe(300); // min window keeps the initial descent visible
   });
+
+  /**
+   * The server may send a SAMPLE of the series rather than all of it. Stage counts must come from
+   * each point's true position (idx), not from how many rows arrived — counting rows would make
+   * "next kick in" read wildly early and misrepresent how long a basin has been stale.
+   */
+  it('reports true stage counts when the payload is a sample', () => {
+    const idx = (p: ProgressionPointDto, i: number): ProgressionPointDto => ({ ...p, idx: i });
+    // Full series would be 1,000 stages: kick at true position 100, basin floor at 300, end at 999.
+    const prog = [
+      idx(pt(1, 30000), 0),
+      idx(kick(101, 900000), 100),
+      idx(pt(301, 26000), 300),   // basin floor
+      idx(pt(1000, 26500), 999),  // latest
+    ];
+    const ils = analyzeIls(prog)!;
+    expect(ils.stagesSinceKick).toBe(899);        // 999 - 100, not 2 rows
+    expect(ils.basinFloor).toBe(26000);
+    expect(ils.stagesSinceBasinMin).toBe(699);    // 999 - 300, not 1 row
+    expect(ils.nextKickIn).toBe(0);               // long past the 100-stage stale window
+  });
+
+  /** Without idx (full payload) the old row-counting behaviour still applies. */
+  it('falls back to counting rows when idx is absent', () => {
+    const prog = [pt(1, 30000), kick(10, 90000), pt(11, 26000), pt(12, 26100), pt(13, 26200)];
+    const ils = analyzeIls(prog)!;
+    expect(ils.stagesSinceKick).toBe(3);
+    expect(ils.stagesSinceBasinMin).toBe(2);
+  });
 });
