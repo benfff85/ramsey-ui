@@ -1,6 +1,7 @@
 package com.setminusx.ramsey.ui.sampler;
 
 import com.setminusx.ramsey.ui.client.MwClient;
+import com.setminusx.ramsey.ui.model.GraphDto;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -44,15 +45,41 @@ public class ActiveStageResolver {
         return cached;
     }
 
+    /**
+     * Ask the stage table directly rather than scanning a campaign's progression for the point
+     * marked ACTIVE.
+     *
+     * The progression is the whole history — 21 MB and 143,000 points at the time of writing, and
+     * it grows with every stage advance — so scanning it for one stage id cost a multi-megabyte
+     * query, serialisation and parse every refresh, for a few hundred bytes of answer. Worse, that
+     * cost grows without bound while the answer stays the same size.
+     */
     private List<ActiveStage> computeActiveStages() {
         return mw.getCampaigns().stream()
                 .filter(c -> "ACTIVE".equalsIgnoreCase(c.status()))
-                .map(c -> mw.getProgression(c.campaignId()).stream()
-                        .filter(p -> "ACTIVE".equalsIgnoreCase(p.status()))
-                        .map(p -> new ActiveStage(c.campaignId(), p.stageId(), p.cliqueCount()))
+                .map(c -> mw.getActiveStages(c.campaignId()).stream()
                         .findFirst()
+                        .map(stage -> new ActiveStage(
+                                c.campaignId(),
+                                stage.stageId(),
+                                cliqueCountOf(stage.baseGraphId())))
                         .orElse(null))
                 .filter(Objects::nonNull)
                 .toList();
+    }
+
+    /** The stage's base-graph clique count; null rather than failing the whole refresh. */
+    private Long cliqueCountOf(Integer baseGraphId) {
+        if (baseGraphId == null) {
+            return null;
+        }
+        try {
+            GraphDto graph = mw.getGraph(baseGraphId);
+            return graph == null || graph.cliqueCount() == null
+                    ? null
+                    : graph.cliqueCount().longValue();
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
