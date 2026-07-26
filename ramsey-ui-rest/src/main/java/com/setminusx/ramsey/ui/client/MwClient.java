@@ -2,6 +2,8 @@ package com.setminusx.ramsey.ui.client;
 
 import com.setminusx.ramsey.ui.config.RamseyProperties;
 import com.setminusx.ramsey.ui.model.CampaignDto;
+import com.setminusx.ramsey.ui.model.GraphDto;
+import com.setminusx.ramsey.ui.model.StageDto;
 import com.setminusx.ramsey.ui.model.FleetDto;
 import com.setminusx.ramsey.ui.model.ProgressionPointDto;
 import org.springframework.core.ParameterizedTypeReference;
@@ -33,6 +35,32 @@ public class MwClient {
                 .retrieve()
                 .body(new ParameterizedTypeReference<>() {});
         return body != null ? body : List.of();
+    }
+
+    /**
+     * A campaign's ACTIVE stage, straight from the stage table.
+     *
+     * The obvious-looking alternative — scan the progression for the point marked ACTIVE — costs
+     * the WHOLE series (21 MB and 143,000 points, growing with every stage advance) to extract one
+     * stage id. This is a couple of hundred bytes and is indexed on (campaign_id, status).
+     */
+    public List<StageDto> getActiveStages(int campaignId) {
+        List<StageDto> body = restClient.get()
+                .uri(uri -> uri.path("/api/ramsey/stages")
+                        .queryParam("campaignId", campaignId)
+                        .queryParam("status", "ACTIVE")
+                        .build())
+                .retrieve()
+                .body(new ParameterizedTypeReference<>() {});
+        return body != null ? body : List.of();
+    }
+
+    /** A graph's metadata by id. The response carries its bitstring; {@link GraphDto} drops it. */
+    public GraphDto getGraph(int graphId) {
+        return restClient.get()
+                .uri("/api/ramsey/graphs/{id}", graphId)
+                .retrieve()
+                .body(GraphDto.class);
     }
 
     public List<FleetDto> getFleets() {
