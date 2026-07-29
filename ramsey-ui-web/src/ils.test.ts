@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { analyzeIls, epochSeries } from './ils';
+import { analyzeIls, epochSeries, BASIN_STALE_STAGES, ESCALATION_CAP } from './ils';
 import type { ProgressionPointDto } from './types';
 
 const pt = (stageId: number, cliqueCount: number, createdDate: string | null = null): ProgressionPointDto =>
@@ -36,7 +36,7 @@ describe('analyzeIls', () => {
     // Still descending — the floor was set on the LAST stage, so the stale clock is at 0
     // and the full window remains. A descent in free fall is never kicked.
     expect(ils.stagesSinceBasinMin).toBe(0);
-    expect(ils.nextKickIn).toBe(100);
+    expect(ils.nextKickIn).toBe(BASIN_STALE_STAGES);
   });
 
   it('counts staleness from the basin floor, not from the kick', () => {
@@ -48,7 +48,7 @@ describe('analyzeIls', () => {
     expect(ils.basinFloor).toBe(26050);
     expect(ils.stagesSinceKick).toBe(31);
     expect(ils.stagesSinceBasinMin).toBe(30);
-    expect(ils.nextKickIn).toBe(70); // 100 - 30
+    expect(ils.nextKickIn).toBe(BASIN_STALE_STAGES - 30);
   });
 
   it('escalates the next-kick multiplier for a fruitless kick', () => {
@@ -65,27 +65,27 @@ describe('analyzeIls', () => {
     expect(ils.nextMultiplier).toBe(1);
   });
 
-  it('escalates geometrically and caps at 32', () => {
+  it('escalates geometrically and caps at ESCALATION_CAP', () => {
     // 2 fruitless kicks -> streak 2 -> 1<<2 = x4 next
     const two = [pt(1, 25840), kick(10, 72000), pt(11, 26000), kick(20, 72000), pt(21, 26000)];
     expect(analyzeIls(two)!.nextMultiplier).toBe(4);
-    // 6 fruitless kicks -> 1<<6 capped at 32
-    const prog = [
-      pt(1, 25840),
-      kick(10, 72000), pt(11, 26000),
-      kick(20, 72000), pt(21, 26000),
-      kick(30, 72000), pt(31, 26000),
-      kick(40, 72000), pt(41, 26000),
-      kick(50, 72000), pt(51, 26000),
-      kick(60, 72000), pt(61, 26000),
-    ];
+    // Enough fruitless kicks that 1<<streak STRICTLY exceeds the cap, derived from the cap so
+    // the clamp is still exercised when a tier is added. The old fixture hardcoded 6 kicks to
+    // overshoot a cap of 32; raising the cap to 64 made 1<<6 land exactly ON it, so the test
+    // passed while no longer testing clamping at all.
+    const needed = Math.log2(ESCALATION_CAP) + 1;
+    const prog = [pt(1, 25840)];
+    for (let i = 1; i <= needed; i++) {
+      prog.push(kick(i * 10, 72000), pt(i * 10 + 1, 26000));
+    }
     const ils = analyzeIls(prog)!;
-    expect(ils.kickCount).toBe(6);
-    expect(ils.nextMultiplier).toBe(32); // min(1<<6, cap 32)
+    expect(ils.kickCount).toBe(needed);
+    expect(1 << needed).toBeGreaterThan(ESCALATION_CAP); // fixture really does overshoot
+    expect(ils.nextMultiplier).toBe(ESCALATION_CAP);
   });
 
   it('estimates ETA from the recent near-floor stage rate', () => {
-    // 3 near-floor stages 60s apart -> 60s/stage; 100 stages left -> 1.7h
+    // near-floor stages 60s apart -> 60s/stage; BASIN_STALE_STAGES left -> that many minutes
     const prog = [
       pt(1, 25840),
       kick(10, 72000, '2026-07-19T01:00:00Z'),
@@ -93,8 +93,8 @@ describe('analyzeIls', () => {
       pt(12, 26040, '2026-07-19T01:02:00Z'),
     ];
     const ils = analyzeIls(prog)!;
-    expect(ils.nextKickIn).toBe(100);
-    expect(ils.etaHours).toBeCloseTo(100 * 60 / 3600, 1);
+    expect(ils.nextKickIn).toBe(BASIN_STALE_STAGES);
+    expect(ils.etaHours).toBeCloseTo(BASIN_STALE_STAGES * 60 / 3600, 1);
   });
 });
 
@@ -131,18 +131,22 @@ describe('epochSeries', () => {
    */
   it('reports true stage counts when the payload is a sample', () => {
     const idx = (p: ProgressionPointDto, i: number): ProgressionPointDto => ({ ...p, idx: i });
-    // Full series would be 1,000 stages: kick at true position 100, basin floor at 300, end at 999.
+    // Sampled payload: idx carries the TRUE position, so counts must come from idx, not row
+    // count. Sized off BASIN_STALE_STAGES so the "past the window" intent survives a config
+    // change -- hardcoding it here is what let this file drift from the QM in the first place.
+    const end = 2 * BASIN_STALE_STAGES;          // last true position
+    const floorAt = BASIN_STALE_STAGES / 2;      // basin floor comfortably > one window back
     const prog = [
       idx(pt(1, 30000), 0),
       idx(kick(101, 900000), 100),
-      idx(pt(301, 26000), 300),   // basin floor
-      idx(pt(1000, 26500), 999),  // latest
+      idx(pt(floorAt + 1, 26000), floorAt),      // basin floor
+      idx(pt(end + 1, 26500), end),              // latest
     ];
     const ils = analyzeIls(prog)!;
-    expect(ils.stagesSinceKick).toBe(899);        // 999 - 100, not 2 rows
+    expect(ils.stagesSinceKick).toBe(end - 100);            // from idx, not 2 rows
     expect(ils.basinFloor).toBe(26000);
-    expect(ils.stagesSinceBasinMin).toBe(699);    // 999 - 300, not 1 row
-    expect(ils.nextKickIn).toBe(0);               // long past the 100-stage stale window
+    expect(ils.stagesSinceBasinMin).toBe(end - floorAt);    // from idx, not 1 row
+    expect(ils.nextKickIn).toBe(0);                         // genuinely past the stale window
   });
 
   /** Without idx (full payload) the old row-counting behaviour still applies. */
