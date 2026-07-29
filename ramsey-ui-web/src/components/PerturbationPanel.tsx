@@ -6,7 +6,7 @@ const fmt = (n: number) => n.toLocaleString('en-US');
 
 /**
  * Iterated-local-search status: how many kicks have fired, where the current basin
- * floored versus the incumbent, and a countdown to the next kick (500 stages since the
+ * floored versus the incumbent, and a countdown to the next kick (1000 stages since the
  * last one). Self-hides for campaigns with no kicks. All derived from the progression
  * series (see analyzeIls) — no extra backend call.
  */

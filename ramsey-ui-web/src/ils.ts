@@ -1,12 +1,18 @@
 import type { ProgressionPointDto } from './types';
 
 // ILS / perturbation constants — mirror the queue-manager RamseyConfig.Perturbation
-// (PERTURBATION_WALL_STAGES / _EDGE_PAIRS / _ESCALATION_CAP). The whole ILS state is
-// derived client-side from the progression series, so the dashboard needs no extra
-// backend endpoint. If those env values change in the QM, update these to match.
-export const BASIN_STALE_STAGES = 100;
+// (PERTURBATION_BASIN_STALE_STAGES / _EDGE_PAIRS / _ESCALATION_CAP). The whole ILS state is
+// derived client-side from the progression series, so the dashboard needs no extra backend
+// endpoint. If those env values change in the QM, update these to match.
+//
+// These HAD drifted: this file said 100 while the QM ran 500, so the "stages since kick"
+// countdown was wrong by 5x and would hit zero long before a kick actually fired. The stale
+// comment above even named PERTURBATION_WALL_STAGES, the env var that basin-staleness replaced.
+// Mirroring by hand is the underlying problem — the QM does not expose these, so nothing detects
+// the drift. Worth serving them from the API if they change again.
+export const BASIN_STALE_STAGES = 1000;
 export const BASE_EDGE_PAIRS = 60;
-export const ESCALATION_CAP = 32; // geometric: multipliers 1,2,4,8,16,32
+export const ESCALATION_CAP = 64; // geometric: multipliers 1,2,4,8,16,32,64
 
 export interface IlsState {
   incumbent: number;         // global campaign min — the graph the kicks are trying to beat
