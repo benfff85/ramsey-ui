@@ -12,7 +12,10 @@ import type { ProgressionPointDto } from './types';
 // the drift. Worth serving them from the API if they change again.
 export const BASIN_STALE_STAGES = 1000;
 export const BASE_EDGE_PAIRS = 60;
-export const ESCALATION_CAP = 64; // geometric: multipliers 1,2,4,8,16,32,64
+export const ESCALATION_CAP = 32; // geometric: multipliers 1,2,4,8,16,32
+// Reverted 64 -> 32 on 2026-07-31 to track the QM. All five x64 (3840-pair) kicks stranded the
+// campaign ~30-53x above the incumbent; x32 recovers 15 times in 16. Rationale and measurements
+// live in ramsey-mw/docker/main/ramsey-compose.yml next to PERTURBATION_ESCALATION_CAP.
 
 export interface IlsState {
   incumbent: number;         // global campaign min — the graph the kicks are trying to beat
