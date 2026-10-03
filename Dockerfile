@@ -1,7 +1,11 @@
 # syntax=docker/dockerfile:1
 
 # --- build stage: Maven builds the React SPA + Spring Boot jar (once, on the build arch) ---
-FROM --platform=$BUILDPLATFORM maven:3.9-eclipse-temurin-25 AS build
+FROM --platform=$BUILDPLATFORM bellsoft/liberica-openjdk-debian:27 AS build
+# There is no maven:3.9-eclipse-temurin-27 image yet, so take Maven from the official image.
+COPY --from=maven:3.9 /usr/share/maven /usr/share/maven
+ENV MAVEN_HOME=/usr/share/maven
+ENV PATH="/usr/share/maven/bin:${PATH}"
 WORKDIR /build
 COPY pom.xml ./
 COPY ramsey-ui-web/pom.xml ramsey-ui-web/pom.xml
@@ -12,7 +16,7 @@ COPY . .
 RUN mvn -q -B -ntp -DskipTests package
 
 # --- runtime stage: slim JRE running the backend jar (per target arch) ---
-FROM eclipse-temurin:25-jre AS runtime
+FROM bellsoft/liberica-openjre-debian:27 AS runtime
 WORKDIR /app
 COPY --from=build /build/ramsey-ui-rest/target/ramsey-ui-rest-0.1.0.jar app.jar
 RUN groupadd -r appgroup && useradd -r -g appgroup -m -d /home/appuser appuser
