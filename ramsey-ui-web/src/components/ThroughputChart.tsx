@@ -52,7 +52,7 @@ export function ThroughputChart({ samples, interval }: { samples: ThroughputSamp
               borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 12 }}
             labelStyle={{ color: 'var(--muted)' }}
             labelFormatter={(t) => fmtTime(Number(t))}
-            formatter={(v: number) => [`${fmtNum(v)} u/s`, 'Throughput']} />
+            formatter={(v) => [`${fmtNum(Number(v))} u/s`, 'Throughput']} />
           <Area type="monotone" dataKey="ups" stroke="var(--accent)" strokeWidth={2}
                 fill="url(#ups-fill)" isAnimationActive={false} dot={false}
                 activeDot={{ r: 4, fill: 'var(--accent)', stroke: 'none' }} />
