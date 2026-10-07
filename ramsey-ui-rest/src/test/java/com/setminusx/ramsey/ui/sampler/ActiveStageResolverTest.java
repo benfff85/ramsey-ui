@@ -120,6 +120,6 @@ class ActiveStageResolverTest {
 
         new ActiveStageResolver(mw, Clock.systemUTC()).resolveActiveStages();
 
-        verify(mw, never()).getProgression(anyInt());
+        verify(mw, never()).getProgressionPage(anyInt(), anyInt(), anyInt());
     }
 }

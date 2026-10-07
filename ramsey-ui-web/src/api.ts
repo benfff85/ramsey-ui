@@ -9,8 +9,8 @@ async function getJson<T>(url: string): Promise<T> {
 export const api = {
   getCampaigns: () => getJson<CampaignDto[]>('/api/dashboard/campaigns'),
   getFleets: () => getJson<FleetDto[]>('/api/dashboard/fleets'),
-  // `sinceStageId` returns only the points after that stage. The full series is tens of
-  // thousands of points and several megabytes, so callers holding the history poll for the tail.
+  // Always bounded: a structural sample of at most `maxPoints` (server default 3,000), or with
+  // `sinceStageId` only the points after that stage, for callers holding a sample.
   getProgression: (id: number, sinceStageId?: number, maxPoints?: number) =>
     getJson<ProgressionPointDto[]>(`/api/dashboard/campaigns/${id}/progression`
       + (sinceStageId != null ? `?sinceStageId=${sinceStageId}`

@@ -29,9 +29,19 @@ public class MwClient {
         return body != null ? body : List.of();
     }
 
-    public List<ProgressionPointDto> getProgression(int campaignId) {
+    /**
+     * Up to {@code limit} progression points after {@code sinceStageId}, in stage order; a page
+     * shorter than {@code limit} is the last.
+     *
+     * Never ask for the whole series (the endpoint without parameters): it is unbounded, and at
+     * 3.66M stages and 555 MB it ran this service out of heap.
+     */
+    public List<ProgressionPointDto> getProgressionPage(int campaignId, int sinceStageId, int limit) {
         List<ProgressionPointDto> body = restClient.get()
-                .uri("/api/ramsey/campaigns/{id}/progression", campaignId)
+                .uri(uri -> uri.path("/api/ramsey/campaigns/{id}/progression")
+                        .queryParam("sinceStageId", sinceStageId)
+                        .queryParam("limit", limit)
+                        .build(campaignId))
                 .retrieve()
                 .body(new ParameterizedTypeReference<>() {});
         return body != null ? body : List.of();
