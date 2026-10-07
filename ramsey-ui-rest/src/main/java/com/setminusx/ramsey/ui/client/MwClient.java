@@ -65,10 +65,16 @@ public class MwClient {
         return body != null ? body : List.of();
     }
 
-    /** A graph's metadata by id. The response carries its bitstring; {@link GraphDto} drops it. */
+    /**
+     * A graph's metadata by id, as stored. {@code reconstruct=none} stops the middleware rebuilding
+     * the bitstring of a delta-lineage graph (a replay of up to 1,000 parent hops) that
+     * {@link GraphDto} would drop anyway.
+     */
     public GraphDto getGraph(int graphId) {
         return restClient.get()
-                .uri("/api/ramsey/graphs/{id}", graphId)
+                .uri(uri -> uri.path("/api/ramsey/graphs/{id}")
+                        .queryParam("reconstruct", "none")
+                        .build(graphId))
                 .retrieve()
                 .body(GraphDto.class);
     }

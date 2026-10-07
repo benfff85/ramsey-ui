@@ -2,6 +2,7 @@ package com.setminusx.ramsey.ui.client;
 
 import com.setminusx.ramsey.ui.config.RamseyProperties;
 import com.setminusx.ramsey.ui.model.CampaignDto;
+import com.setminusx.ramsey.ui.model.GraphDto;
 import com.setminusx.ramsey.ui.model.ProgressionPointDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.client.MockRestServiceServer;
@@ -59,6 +60,28 @@ class MwClientTest {
         assertThat(prog.get(0).stageId()).isEqualTo(42);
         assertThat(prog.get(0).cliqueCount()).isEqualTo(775623);
         assertThat(prog.get(0).status()).isEqualTo("ACTIVE");
+        holder[0].verify();
+    }
+
+    /**
+     * The resolver polls the active stage's base graph every few seconds for its metadata only.
+     * Under graph delta lineage most graphs store no bits, and the middleware's default GET
+     * rebuilds them by replaying up to 1,000 parent hops, so the poll must ask for the stored row.
+     */
+    @Test
+    void fetches_graph_metadata_without_rebuilding_its_bits() {
+        MockRestServiceServer[] holder = new MockRestServiceServer[1];
+        MwClient client = build(holder);
+        holder[0].expect(requestTo("http://mw:8080/api/ramsey/graphs/5114841?reconstruct=none"))
+                .andRespond(withSuccess("""
+                    {"graphId":5114841,"cliqueCount":25767,"vertexCount":281,"edgeData":null,
+                     "parentGraphId":5114840,"lineageDepth":33}
+                    """, APPLICATION_JSON));
+
+        GraphDto graph = client.getGraph(5114841);
+        assertThat(graph.graphId()).isEqualTo(5114841);
+        assertThat(graph.cliqueCount()).isEqualTo(25767);
+        assertThat(graph.vertexCount()).isEqualTo(281);
         holder[0].verify();
     }
 }
