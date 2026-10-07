@@ -70,7 +70,7 @@ export function CliqueProgressionChart({ progression }: { progression: Progressi
             contentStyle={{ background: 'var(--panel-2)', border: '1px solid var(--border)',
               borderRadius: 8, fontFamily: 'var(--font-mono)', fontSize: 12 }}
             labelStyle={{ color: 'var(--muted)' }}
-            formatter={(v: number) => [yFmt(v), 'cliques']} labelFormatter={(s) => `+${fmtNum(Number(s))} stages`} />
+            formatter={(v) => [yFmt(Number(v)), 'cliques']} labelFormatter={(s) => `+${fmtNum(Number(s))} stages`} />
           {ils && (
             <ReferenceLine y={shift(ils.incumbent)} stroke="var(--accent)" strokeDasharray="4 4" strokeOpacity={0.8}
               label={{ value: `best ${fmtNum(ils.incumbent)}`, position: 'insideBottomLeft',

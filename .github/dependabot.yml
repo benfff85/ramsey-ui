@@ -1,0 +1,19 @@
+version: 2
+updates:
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "daily"
+  # The React dashboard. Minor and patch bumps arrive as one grouped PR; majors stay separate,
+  # since they are the ones that break (recharts 3 and TypeScript 7 each needed code changes).
+  - package-ecosystem: "npm"
+    directory: "/ramsey-ui-web"
+    schedule:
+      interval: "daily"
+    groups:
+      npm-minor-and-patch:
+        update-types: ["minor", "patch"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
