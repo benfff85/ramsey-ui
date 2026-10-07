@@ -45,16 +45,16 @@ class MwClientTest {
     }
 
     @Test
-    void maps_progression() {
+    void maps_progression_page() {
         MockRestServiceServer[] holder = new MockRestServiceServer[1];
         MwClient client = build(holder);
-        holder[0].expect(requestTo("http://mw:8080/api/ramsey/campaigns/10/progression"))
+        holder[0].expect(requestTo("http://mw:8080/api/ramsey/campaigns/10/progression?sinceStageId=41&limit=500"))
                 .andRespond(withSuccess("""
                     [{"stageId":42,"graphId":8348,"cliqueCount":775623,"status":"ACTIVE",
                       "createdDate":"2026-06-16T12:00:00"}]
                     """, APPLICATION_JSON));
 
-        List<ProgressionPointDto> prog = client.getProgression(10);
+        List<ProgressionPointDto> prog = client.getProgressionPage(10, 41, 500);
         assertThat(prog).hasSize(1);
         assertThat(prog.get(0).stageId()).isEqualTo(42);
         assertThat(prog.get(0).cliqueCount()).isEqualTo(775623);

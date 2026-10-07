@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 
 /**
- * Points to request for the progression charts. The full series is unbounded — it passed 80,000
- * points and 11 MB, which a phone cannot parse — and a chart a few hundred pixels wide cannot
- * show more than this anyway. The server samples structurally (kicks and epoch floors always
- * survive) and stamps each point's true position, so the axis and the ILS stage counts stay exact.
+ * Points to request for the progression charts. The full series is unbounded — it passed 3.66M
+ * points and 555 MB in Oct 2026, and the server no longer serves it — and a chart a few hundred
+ * pixels wide cannot show more than this anyway. The server samples structurally (kicks and
+ * epoch floors always survive) and stamps each point's true position, so the axis and the ILS
+ * stage counts stay exact.
  */
 const MAX_PROGRESSION_POINTS = 3000;
 import { api } from './api';
@@ -45,10 +46,8 @@ export default function App() {
     }).catch(() => undefined);
   }, []);
 
-  // Progression is append-only and unbounded — a long-running campaign is already tens of
-  // thousands of points and several megabytes. It has to stay current as stages advance, but a
-  // descent advances more than once a second, so refetching the whole series each time moved
-  // megabytes per second. Fetch it once per campaign, then only the tail.
+  // Progression is append-only and unbounded, and the fleet advances several stages a second.
+  // Fetch a sample once per campaign, then only the tail.
   const highestStageIdRef = useRef<number | null>(null);
 
   useEffect(() => {
@@ -64,10 +63,25 @@ export default function App() {
     return () => { alive = false; };
   }, [selectedId]);
 
+  // Read by the tail effect without re-running it on every append.
+  const heldPointsRef = useRef(0);
+  heldPointsRef.current = progression.length;
+
   useEffect(() => {
     const since = highestStageIdRef.current;
     if (selectedId == null || liveStageId == null || since == null) return;
     let alive = true;
+    // Appending every stage grows the held series without bound in a tab left open (~18,000
+    // points an hour at 5 stages/s). Once it doubles past the sample size, take a fresh sample
+    // instead: it runs through the server's newest point, so it also covers the tail.
+    if (heldPointsRef.current > 2 * MAX_PROGRESSION_POINTS) {
+      api.getProgression(selectedId, undefined, MAX_PROGRESSION_POINTS).then((points) => {
+        if (!alive || !points.length) return;
+        setProgression(points);
+        highestStageIdRef.current = points.reduce((m, p) => Math.max(m, p.stageId), since);
+      }).catch(() => undefined);
+      return () => { alive = false; };
+    }
     api.getProgression(selectedId, since).then((points) => {
       if (!alive || !points.length) return;
       highestStageIdRef.current = points.reduce((m, p) => Math.max(m, p.stageId), since);

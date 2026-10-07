@@ -14,6 +14,8 @@ import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 class DashboardControllerTest {
@@ -24,7 +26,7 @@ class DashboardControllerTest {
     private final RamseyProperties props = new RamseyProperties("http://mw:8080",
             new RamseyProperties.Sampler(1000), new RamseyProperties.Throughput(100, 7200));
     private final Clock clock = Clock.fixed(Instant.ofEpochMilli(2000), ZoneOffset.UTC);
-    private final ProgressionCache progressionCache = new ProgressionCache(mw);
+    private final ProgressionCache progressionCache = new ProgressionCache(mw, clock);
     private final DashboardController controller =
             new DashboardController(mw, live, buffer, props, clock, progressionCache);
 
@@ -38,7 +40,7 @@ class DashboardControllerTest {
     @Test
     void progression_delegates_to_mw() {
         ProgressionPointDto p = new ProgressionPointDto(42, 1, 775623L, "ACTIVE", "x", null, null);
-        when(mw.getProgression(10)).thenReturn(List.of(p));
+        serve(10, List.of(p));
         assertThat(controller.progression(10, null, null))
                 .extracting(ProgressionPointDto::stageId).containsExactly(42);
     }
@@ -48,7 +50,7 @@ class DashboardControllerTest {
     void progression_sinceStageId_returnsOnlyNewerPoints() {
         ProgressionPointDto older = new ProgressionPointDto(42, 1, 775623L, "INACTIVE", "x", null, null);
         ProgressionPointDto newer = new ProgressionPointDto(43, 2, 775000L, "ACTIVE", "y", null, null);
-        when(mw.getProgression(10)).thenReturn(List.of(older, newer));
+        serve(10, List.of(older, newer));
         assertThat(controller.progression(10, 42, null))
                 .extracting(ProgressionPointDto::stageId).containsExactly(43);
         assertThat(controller.progression(10, 43, null)).isEmpty();
@@ -58,11 +60,11 @@ class DashboardControllerTest {
     @Test
     void progression_isCachedAcrossCalls() {
         ProgressionPointDto p = new ProgressionPointDto(42, 1, 775623L, "ACTIVE", "x", null, null);
-        when(mw.getProgression(10)).thenReturn(List.of(p));
+        serve(10, List.of(p));
         for (int i = 0; i < 20; i++) {
             controller.progression(10, 41, null);
         }
-        verify(mw, times(1)).getProgression(10);
+        verify(mw, times(1)).getProgressionPage(eq(10), anyInt(), anyInt());
     }
 
     @Test
@@ -95,6 +97,15 @@ class DashboardControllerTest {
         assertThat(controller.history(null, null)).hasSize(3);
     }
 
+    /** Answers page requests the way the middleware does: stage order, after the cursor, capped. */
+    private void serve(int campaignId, List<ProgressionPointDto> series) {
+        when(mw.getProgressionPage(eq(campaignId), anyInt(), anyInt())).thenAnswer(inv -> {
+            int since = inv.getArgument(1);
+            int limit = inv.getArgument(2);
+            return series.stream().filter(p -> p.stageId() > since).limit(limit).toList();
+        });
+    }
+
     // ---------- downsampling for clients that cannot take the whole series ----------
 
     private ProgressionPointDto pt(int stageId, long clique, String details) {
@@ -117,7 +128,7 @@ class DashboardControllerTest {
             if (i == 300) clique = 3L;           // epoch-2 floor
             series.add(pt(i, clique, details));
         }
-        when(mw.getProgression(7)).thenReturn(series);
+        serve(7, series);
 
         List<ProgressionPointDto> out = controller.progression(7, null, 50);
 
@@ -133,7 +144,7 @@ class DashboardControllerTest {
     void sampling_preservesTrueSeriesPosition() {
         List<ProgressionPointDto> series = new java.util.ArrayList<>();
         for (int i = 0; i < 300; i++) series.add(pt(i + 1, 500L + i, null));
-        when(mw.getProgression(7)).thenReturn(series);
+        serve(7, series);
 
         List<ProgressionPointDto> out = controller.progression(7, null, 30);
 
@@ -147,7 +158,7 @@ class DashboardControllerTest {
     @Test
     void sampling_isANoOpBelowTheCap() {
         List<ProgressionPointDto> series = List.of(pt(1, 10L, null), pt(2, 9L, null));
-        when(mw.getProgression(7)).thenReturn(series);
+        serve(7, series);
         assertThat(controller.progression(7, null, 500))
                 .extracting(ProgressionPointDto::stageId).containsExactly(1, 2);
     }

@@ -44,10 +44,10 @@ public class DashboardController {
     }
 
     /**
-     * A campaign's progression. With {@code sinceStageId} only the points after that stage are
-     * returned, so the dashboard can hold the history and poll for the tail — the full series runs
-     * to tens of thousands of points and several megabytes, and it is refetched on every stage
-     * advance, which during a descent is more than once a second.
+     * A campaign's progression, always bounded: a structural sample of at most {@code maxPoints}
+     * (see {@link ProgressionCache#sampled}), or with {@code sinceStageId} only the points after
+     * that stage, so the dashboard can hold a sample and poll for the tail. The full series is
+     * never served — it passed 3.66M points and 555 MB.
      */
     @GetMapping("/campaigns/{id}/progression")
     public List<ProgressionPointDto> progression(@PathVariable int id,
@@ -56,9 +56,7 @@ public class DashboardController {
         if (sinceStageId != null) {
             return progressionCache.since(id, sinceStageId);
         }
-        return maxPoints == null
-                ? progressionCache.get(id)
-                : progressionCache.sampled(id, maxPoints);
+        return progressionCache.sampled(id, maxPoints);
     }
 
     @GetMapping("/stages/{id}/live")
