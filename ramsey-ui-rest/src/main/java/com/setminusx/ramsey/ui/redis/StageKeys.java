@@ -10,7 +10,4 @@ public final class StageKeys {
      * faster than the sampler ticks.
      */
     public static final String PROCESSED_TOTAL = "processed_total:";
-    public static final String WORK_INDEX = "stage_work_index:";
-    public static final String STAGE_CONFIG = "stage_config:";
-    public static final String BEST_RESULTS = "best_results:";
 }

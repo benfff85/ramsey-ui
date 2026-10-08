@@ -4,7 +4,6 @@ import com.setminusx.ramsey.ui.client.MwClient;
 import com.setminusx.ramsey.ui.service.ProgressionCache;
 import com.setminusx.ramsey.ui.config.RamseyProperties;
 import com.setminusx.ramsey.ui.model.*;
-import com.setminusx.ramsey.ui.redis.RedisLiveStageService;
 import com.setminusx.ramsey.ui.sampler.ThroughputBuffer;
 import org.junit.jupiter.api.Test;
 
@@ -21,14 +20,22 @@ import static org.mockito.Mockito.*;
 class DashboardControllerTest {
 
     private final MwClient mw = mock(MwClient.class);
-    private final RedisLiveStageService live = mock(RedisLiveStageService.class);
     private final ThroughputBuffer buffer = new ThroughputBuffer(100);
     private final RamseyProperties props = new RamseyProperties("http://mw:8080",
             new RamseyProperties.Sampler(1000), new RamseyProperties.Throughput(100, 7200));
     private final Clock clock = Clock.fixed(Instant.ofEpochMilli(2000), ZoneOffset.UTC);
     private final ProgressionCache progressionCache = new ProgressionCache(mw, clock);
     private final DashboardController controller =
-            new DashboardController(mw, live, buffer, props, clock, progressionCache);
+            new DashboardController(mw, buffer, props, clock, progressionCache);
+
+    /** Best novel results per stage: meaningless at several stages a second, and polled. */
+    @Test
+    void there_is_no_per_stage_live_endpoint() throws Exception {
+        org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(controller).build()
+                .perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .get("/api/dashboard/stages/42/live"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isNotFound());
+    }
 
     @Test
     void campaigns_delegates_to_mw() {
@@ -65,13 +72,6 @@ class DashboardControllerTest {
             controller.progression(10, 41, null);
         }
         verify(mw, times(1)).getProgressionPage(eq(10), anyInt(), anyInt());
-    }
-
-    @Test
-    void live_delegates_to_redis_service() {
-        LiveStageDto dto = new LiveStageDto(42, 1500, 300, 600, 50.0, List.of());
-        when(live.getLiveStage(42)).thenReturn(dto);
-        assertThat(controller.live(42)).isEqualTo(dto);
     }
 
     @Test

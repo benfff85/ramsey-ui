@@ -44,12 +44,11 @@ class ThroughputWebSocketIT {
         });
 
         Thread.sleep(200); // allow subscription to register
-        broadcaster.broadcast(new LiveTick(123L, 2, 42, 999.0, 1500, 300, 600, 50.0, 775623L));
+        broadcaster.broadcast(new LiveTick(123L, 2, 42, 999.0, 775623L));
 
         LiveTick got = received.get(5, TimeUnit.SECONDS);
         assertThat(got.stageId()).isEqualTo(42);
         assertThat(got.unitsPerSec()).isEqualTo(999.0);
-        assertThat(got.progressPct()).isEqualTo(50.0);
         assertThat(got.cliqueCount()).isEqualTo(775623L);
     }
 }

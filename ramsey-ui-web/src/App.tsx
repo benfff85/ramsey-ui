@@ -8,6 +8,13 @@ import { useEffect, useRef, useState } from 'react';
  * stage counts stay exact.
  */
 const MAX_PROGRESSION_POINTS = 3000;
+
+/**
+ * How often the progression charts fetch new stages. They used to append on every stage change the
+ * socket reported, which at 7+ stages a second meant a fetch and a re-render of thousands of points
+ * about once a second, for charts whose shape cannot change visibly that fast.
+ */
+const PROGRESSION_REFRESH_MS = 30_000;
 import { api } from './api';
 import { Sidebar, type Interval } from './components/Sidebar';
 import { StatCards, sortCampaigns } from './components/StatCards';
@@ -15,16 +22,13 @@ import { ThroughputChart } from './components/ThroughputChart';
 import { CliqueProgressionChart } from './components/CliqueProgressionChart';
 import { FleetPanel } from './components/FleetPanel';
 import { PerturbationPanel } from './components/PerturbationPanel';
-import { BestResultsTable } from './components/BestResultsTable';
-import { RawDataTable } from './components/RawDataTable';
 import { useThroughputSocket } from './useThroughputSocket';
-import type { CampaignDto, ProgressionPointDto, BestResultDto } from './types';
+import type { CampaignDto, ProgressionPointDto } from './types';
 
 export default function App() {
   const [campaigns, setCampaigns] = useState<CampaignDto[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [progression, setProgression] = useState<ProgressionPointDto[]>([]);
-  const [bestResults, setBestResults] = useState<BestResultDto[]>([]);
   const [interval, setIntervalSec] = useState<Interval>(5);
   const [collapsed, setCollapsed] = useState(false);
   const { byCampaign, connected } = useThroughputSocket();
@@ -34,9 +38,6 @@ export default function App() {
   const live = selectedId != null ? byCampaign[selectedId] : undefined;
   const latest = live?.latest ?? null;
   const samples = live?.samples ?? [];
-
-  // The selected campaign's active stage reported by the live socket — drives transitions.
-  const liveStageId = latest?.stageId ?? null;
 
   useEffect(() => {
     api.getCampaigns().then((cs) => {
@@ -67,44 +68,38 @@ export default function App() {
   const heldPointsRef = useRef(0);
   heldPointsRef.current = progression.length;
 
+  // Fetch only the tail, on a timer rather than per stage advance (see PROGRESSION_REFRESH_MS).
   useEffect(() => {
-    const since = highestStageIdRef.current;
-    if (selectedId == null || liveStageId == null || since == null) return;
+    if (selectedId == null) return;
     let alive = true;
-    // Appending every stage grows the held series without bound in a tab left open (~18,000
-    // points an hour at 5 stages/s). Once it doubles past the sample size, take a fresh sample
-    // instead: it runs through the server's newest point, so it also covers the tail.
-    if (heldPointsRef.current > 2 * MAX_PROGRESSION_POINTS) {
-      api.getProgression(selectedId, undefined, MAX_PROGRESSION_POINTS).then((points) => {
+    const refresh = () => {
+      const since = highestStageIdRef.current;
+      if (since == null) return;
+      // Appending grows the held series without bound in a tab left open. Once it doubles past
+      // the sample size, take a fresh sample instead: it runs through the server's newest point,
+      // so it also covers the tail.
+      if (heldPointsRef.current > 2 * MAX_PROGRESSION_POINTS) {
+        api.getProgression(selectedId, undefined, MAX_PROGRESSION_POINTS).then((points) => {
+          if (!alive || !points.length) return;
+          setProgression(points);
+          highestStageIdRef.current = points.reduce((m, p) => Math.max(m, p.stageId), since);
+        }).catch(() => undefined);
+        return;
+      }
+      api.getProgression(selectedId, since).then((points) => {
         if (!alive || !points.length) return;
-        setProgression(points);
         highestStageIdRef.current = points.reduce((m, p) => Math.max(m, p.stageId), since);
+        // Dedupe by stage: a slow response can overlap the next refresh's.
+        setProgression((prev) => {
+          const seen = new Set(prev.map((p) => p.stageId));
+          const fresh = points.filter((p) => !seen.has(p.stageId));
+          return fresh.length ? [...prev, ...fresh] : prev;
+        });
       }).catch(() => undefined);
-      return () => { alive = false; };
-    }
-    api.getProgression(selectedId, since).then((points) => {
-      if (!alive || !points.length) return;
-      highestStageIdRef.current = points.reduce((m, p) => Math.max(m, p.stageId), since);
-      // Dedupe by stage: two advances in quick succession can leave overlapping deltas in flight,
-      // since the cursor only moves when a response lands.
-      setProgression((prev) => {
-        const seen = new Set(prev.map((p) => p.stageId));
-        const fresh = points.filter((p) => !seen.has(p.stageId));
-        return fresh.length ? [...prev, ...fresh] : prev;
-      });
-    }).catch(() => undefined);
-    return () => { alive = false; };
-  }, [selectedId, liveStageId]);
-
-  // Best-results for the live stage; polled and re-keyed when the stage changes.
-  useEffect(() => {
-    if (liveStageId == null) { setBestResults([]); return; }
-    let alive = true;
-    const tick = () => api.getLiveStage(liveStageId).then((d) => { if (alive) setBestResults(d.bestResults); }).catch(() => undefined);
-    tick();
-    const h = setInterval(tick, 5000);
+    };
+    const h = setInterval(refresh, PROGRESSION_REFRESH_MS);
     return () => { alive = false; clearInterval(h); };
-  }, [liveStageId]);
+  }, [selectedId]);
 
   const sortedProg = [...progression].sort((a, b) => a.stageId - b.stageId);
   const fallbackCurrent = sortedProg[sortedProg.length - 1];
@@ -120,9 +115,6 @@ export default function App() {
     (m, p) => (m == null || p.cliqueCount < m ? p.cliqueCount : m), null);
   const minCliqueCount = progMin == null ? cliqueCount
     : cliqueCount == null ? progMin : Math.min(progMin, cliqueCount);
-  const progressPct = latest?.progressPct ?? null;
-  const workIndex = latest?.workIndex ?? 0;
-  const totalPairs = latest?.totalPairs ?? 0;
 
   return (
     <div className={`app${collapsed ? ' is-collapsed' : ''}`}>
@@ -131,8 +123,7 @@ export default function App() {
                lastUpdated={new Date().toLocaleTimeString()} connected={connected}
                collapsed={collapsed} onToggleCollapse={() => setCollapsed((c) => !c)} />
       <main className="main">
-        <StatCards stageId={stageId} cliqueCount={cliqueCount} minCliqueCount={minCliqueCount} firstCliqueCount={firstCliqueCount}
-                   progressPct={progressPct} workIndex={workIndex} totalPairs={totalPairs} />
+        <StatCards stageId={stageId} cliqueCount={cliqueCount} minCliqueCount={minCliqueCount} firstCliqueCount={firstCliqueCount} />
         <FleetPanel />
         <ThroughputChart samples={samples} interval={interval} />
         {progression.length > 0 && <PerturbationPanel progression={progression} />}
@@ -140,12 +131,6 @@ export default function App() {
           <div className="grid-2">
             <CliqueProgressionChart progression={progression} />
           </div>
-        )}
-        {progression.length > 0 && (
-          <>
-            <BestResultsTable bestResults={bestResults} currentClique={cliqueCount ?? 0} />
-            <RawDataTable progression={progression} />
-          </>
         )}
       </main>
     </div>

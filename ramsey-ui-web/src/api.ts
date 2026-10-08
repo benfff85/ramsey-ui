@@ -1,4 +1,4 @@
-import type { CampaignDto, ProgressionPointDto, LiveStageDto, ThroughputSample, FleetDto } from './types';
+import type { CampaignDto, ProgressionPointDto, ThroughputSample, FleetDto } from './types';
 
 async function getJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -15,7 +15,6 @@ export const api = {
     getJson<ProgressionPointDto[]>(`/api/dashboard/campaigns/${id}/progression`
       + (sinceStageId != null ? `?sinceStageId=${sinceStageId}`
          : maxPoints != null ? `?maxPoints=${maxPoints}` : '')),
-  getLiveStage: (id: number) => getJson<LiveStageDto>(`/api/dashboard/stages/${id}/live`),
   getThroughputHistory: (windowSeconds: number) =>
     getJson<ThroughputSample[]>(`/api/dashboard/throughput/history?window=${windowSeconds}`),
 };

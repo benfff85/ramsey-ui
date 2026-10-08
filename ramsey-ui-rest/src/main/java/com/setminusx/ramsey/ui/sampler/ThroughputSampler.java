@@ -61,7 +61,7 @@ public class ThroughputSampler {
 
         if (actives.isEmpty()) {
             last.clear();
-            emit(new LiveTick(now, null, null, 0.0, 0, 0, 0, 0.0, null));
+            emit(new LiveTick(now, null, null, 0.0, null));
             return;
         }
 
@@ -108,12 +108,7 @@ public class ThroughputSampler {
         }
         last.put(campaignId, new Baseline(stageId, count, now));
 
-        long workIndex = redis.getWorkIndex(stageId);
-        long totalPairs = redis.getTotalPairs(stageId);
-        double progressPct = totalPairs > 0 ? Math.min(100.0, (workIndex * 100.0) / totalPairs) : 0.0;
-
-        emit(new LiveTick(now, campaignId, stageId, unitsPerSec, count, workIndex, totalPairs,
-                progressPct, active.cliqueCount()));
+        emit(new LiveTick(now, campaignId, stageId, unitsPerSec, active.cliqueCount()));
     }
 
     private void emit(LiveTick tick) {

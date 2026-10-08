@@ -4,7 +4,8 @@ server:
     enabled: true
     # The progression payload is ~1.1 MB of JSON (~9.7k stage points) and gzips ~9x —
     # the dominant load cost on mobile. Also covers the JS/CSS bundle and other JSON.
-    mime-types: application/json,text/html,text/css,application/javascript,text/plain
+    # .js is served as text/javascript; without it the 632 KB bundle went out uncompressed.
+    mime-types: application/json,text/html,text/css,application/javascript,text/javascript,text/plain
     min-response-size: 1024
 spring:
   application:
