@@ -3,7 +3,6 @@ package com.setminusx.ramsey.ui.web;
 import com.setminusx.ramsey.ui.client.MwClient;
 import com.setminusx.ramsey.ui.config.RamseyProperties;
 import com.setminusx.ramsey.ui.model.*;
-import com.setminusx.ramsey.ui.redis.RedisLiveStageService;
 import com.setminusx.ramsey.ui.sampler.ThroughputBuffer;
 import com.setminusx.ramsey.ui.service.ProgressionCache;
 import org.springframework.web.bind.annotation.*;
@@ -16,17 +15,14 @@ import java.util.List;
 public class DashboardController {
 
     private final MwClient mwClient;
-    private final RedisLiveStageService liveStageService;
     private final ThroughputBuffer throughputBuffer;
     private final RamseyProperties props;
     private final Clock clock;
     private final ProgressionCache progressionCache;
 
-    public DashboardController(MwClient mwClient, RedisLiveStageService liveStageService,
-                              ThroughputBuffer throughputBuffer, RamseyProperties props, Clock clock,
+    public DashboardController(MwClient mwClient, ThroughputBuffer throughputBuffer, RamseyProperties props, Clock clock,
                               ProgressionCache progressionCache) {
         this.mwClient = mwClient;
-        this.liveStageService = liveStageService;
         this.throughputBuffer = throughputBuffer;
         this.props = props;
         this.clock = clock;
@@ -59,10 +55,6 @@ public class DashboardController {
         return progressionCache.sampled(id, maxPoints);
     }
 
-    @GetMapping("/stages/{id}/live")
-    public LiveStageDto live(@PathVariable int id) {
-        return liveStageService.getLiveStage(id);
-    }
 
     @GetMapping("/throughput/history")
     public List<ThroughputSample> history(@RequestParam(required = false) Integer window,

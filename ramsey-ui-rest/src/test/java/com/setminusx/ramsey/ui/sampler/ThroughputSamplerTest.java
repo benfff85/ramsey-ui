@@ -45,6 +45,33 @@ class ThroughputSamplerTest {
         return cap.getAllValues();
     }
 
+    /**
+     * At several stages a second a per-stage progress % is noise, and computing it read the
+     * stage's work index and its ~40 KB config (which embeds the whole graph) from Redis on every
+     * tick, for every campaign. A tick needs only the campaign's processed total.
+     */
+    @Test
+    void a_tick_reads_only_the_campaign_total() {
+        when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(10, 100, 25760L)));
+        when(redis.getProcessedTotal(10)).thenReturn(5_000L);
+        sampler.sample();
+        clock.advanceMillis(1000);
+        when(redis.getProcessedTotal(10)).thenReturn(8_000L);
+        sampler.sample();
+
+        verify(redis, times(2)).getProcessedTotal(10);
+        verifyNoMoreInteractions(redis);
+        assertThat(lastBroadcast().unitsPerSec()).isEqualTo(3_000.0);
+    }
+
+    /** The tick is serialized to every open dashboard once a second per campaign. */
+    @Test
+    void the_tick_carries_only_what_the_dashboard_shows() {
+        assertThat(java.util.Arrays.stream(LiveTick.class.getRecordComponents())
+                .map(java.lang.reflect.RecordComponent::getName))
+                .containsExactly("ts", "campaignId", "stageId", "unitsPerSec", "cliqueCount");
+    }
+
     @Test
     void emits_empty_tick_when_no_active_stage() {
         when(resolver.resolveActiveStages()).thenReturn(List.of());
@@ -53,14 +80,11 @@ class ThroughputSamplerTest {
         assertThat(t.campaignId()).isNull();
         assertThat(t.stageId()).isNull();
         assertThat(t.unitsPerSec()).isZero();
-        assertThat(t.progressPct()).isZero();
     }
 
     @Test
-    void first_sample_baselines_then_computes_rate_and_progress() {
+    void first_sample_baselines_then_computes_rate() {
         when(resolver.resolveActiveStages()).thenReturn(List.of(new ActiveStage(2, 42, 775623L)));
-        when(redis.getWorkIndex(42)).thenReturn(300L);
-        when(redis.getTotalPairs(42)).thenReturn(600L);
 
         when(redis.getProcessedCount(42)).thenReturn(1000L);
         sampler.sample(); // baseline, expect 0/s
@@ -75,7 +99,6 @@ class ThroughputSamplerTest {
         assertThat(t.campaignId()).isEqualTo(2);
         assertThat(t.stageId()).isEqualTo(42);
         assertThat(t.unitsPerSec()).isEqualTo(100.0);
-        assertThat(t.progressPct()).isEqualTo(50.0);
         assertThat(t.cliqueCount()).isEqualTo(775623L);
     }
 
