@@ -29,6 +29,31 @@ class SpaServingTest {
         assertThat(get("/")).contains("<div id=\"root\">");
     }
 
+    private String header(String path, String name) throws Exception {
+        HttpResponse<Void> resp = HttpClient.newHttpClient().send(
+                HttpRequest.newBuilder(URI.create("http://localhost:" + port + path)).GET().build(),
+                HttpResponse.BodyHandlers.discarding());
+        return resp.headers().firstValue(name).orElse("");
+    }
+
+    /**
+     * index.html names the current bundle, so a browser must revalidate it on every load. Without
+     * a Cache-Control header browsers cache it heuristically for hours, and an open dashboard kept
+     * running the previous build (and its removed API calls) after a deploy (2026-10-08).
+     */
+    @Test
+    void index_html_is_revalidated_on_every_load() throws Exception {
+        assertThat(header("/", "Cache-Control")).contains("no-cache");
+    }
+
+    /** Assets are named by content hash, so a changed file always gets a new name. */
+    @Test
+    void hashed_assets_are_cached_long_term() throws Exception {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("/assets/[A-Za-z0-9_.-]+\\.js").matcher(get("/"));
+        assertThat(m.find()).as("index.html references a hashed bundle").isTrue();
+        assertThat(header(m.group(), "Cache-Control")).contains("max-age=31536000").contains("immutable");
+    }
+
     @Test
     void health_is_up() throws Exception {
         assertThat(get("/actuator/health")).contains("\"status\":\"UP\"");
